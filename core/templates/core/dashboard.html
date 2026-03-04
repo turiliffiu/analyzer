@@ -1,0 +1,149 @@
+{% extends 'core/base.html' %}
+{% block title %}Dashboard - Ericsson Analyzer{% endblock %}
+
+{% block content %}
+
+<!-- Header Dashboard -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0"><i class="bi bi-grid-3x3-gap me-2 text-primary"></i>Dashboard Analisi</h3>
+    <a href="/" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Nuova Analisi
+    </a>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center p-3">
+                <div class="fs-1 fw-bold text-primary">{{ stats.total_analyses }}</div>
+                <div class="text-muted small">Analisi Totali</div>
+                <i class="bi bi-file-earmark-bar-graph text-primary opacity-25" style="font-size:2rem;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center p-3">
+                <div class="fs-1 fw-bold text-danger">{{ stats.total_critical }}</div>
+                <div class="text-muted small">Allarmi Critical</div>
+                <i class="bi bi-bell-fill text-danger opacity-25" style="font-size:2rem;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center p-3">
+                <div class="fs-1 fw-bold text-warning">{{ stats.total_vswr_critical }}</div>
+                <div class="text-muted small">VSWR Critici</div>
+                <i class="bi bi-broadcast text-warning opacity-25" style="font-size:2rem;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center p-3">
+                <div class="fs-1 fw-bold text-success">{{ stats.total_radio_units }}</div>
+                <div class="text-muted small">Radio Units</div>
+                <i class="bi bi-reception-4 text-success opacity-25" style="font-size:2rem;"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabella Analisi -->
+<div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-table me-2 text-primary"></i>Storico Analisi</h6>
+        <span class="badge bg-secondary">{{ page_obj.paginator.count }} totali</span>
+    </div>
+    <div class="card-body p-0">
+        {% if analyses %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Apparato</th>
+                        <th>Data</th>
+                        <th class="text-center">Radio Units</th>
+                        <th class="text-center">Critical</th>
+                        <th class="text-center">Major</th>
+                        <th class="text-center">VSWR Crit.</th>
+                        <th class="text-center">FRU</th>
+                        <th class="text-center">RET/TMA</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for analysis in analyses %}
+                    <tr {% if analysis.alarms_critical_count > 0 %}class="table-danger"{% endif %}>
+                        <td>
+                            <div class="fw-semibold">
+                                <i class="bi bi-hdd-network me-1 text-muted"></i>
+                                {{ analysis.log_file.apparato_nome|default:"—" }}
+                            </div>
+                            <small class="text-muted">{{ analysis.log_file.filename|truncatechars:30 }}</small>
+                        </td>
+                        <td class="text-nowrap">
+                            <small>{{ analysis.created_at|date:"d/m/Y H:i" }}</small>
+                        </td>
+                        <td class="text-center"><span class="badge bg-primary">{{ analysis.radio_units_count }}</span></td>
+                        <td class="text-center">
+                            {% if analysis.alarms_critical_count > 0 %}
+                            <span class="badge bg-danger">{{ analysis.alarms_critical_count }}</span>
+                            {% else %}<span class="text-muted">0</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if analysis.alarms_major_count > 0 %}
+                            <span class="badge bg-warning text-dark">{{ analysis.alarms_major_count }}</span>
+                            {% else %}<span class="text-muted">0</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if analysis.vswr_critical_count > 0 %}
+                            <span class="badge bg-danger">{{ analysis.vswr_critical_count }}</span>
+                            {% else %}<span class="text-muted">0</span>{% endif %}
+                        </td>
+                        <td class="text-center"><span class="badge bg-secondary">{{ analysis.fru_count }}</span></td>
+                        <td class="text-center text-muted small">{{ analysis.ret_count }}/{{ analysis.tma_count }}</td>
+                        <td class="text-end">
+                            <a href="/analysis/{{ analysis.id }}/" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye me-1"></i>Dettagli
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginazione -->
+        {% if page_obj.has_other_pages %}
+        <div class="d-flex justify-content-center p-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox display-4 d-block mb-3"></i>
+            <p>Nessuna analisi disponibile. <a href="/">Carica il primo file di log</a>.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

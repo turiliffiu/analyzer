@@ -1,0 +1,33 @@
+# Python
+*.pyc
+*.pyo
+__pycache__/
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Django
+*.sqlite3
+.env
+media/
+staticfiles/
+*.log
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Deploy
+CREDENTIALS*.txt

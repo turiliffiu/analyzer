@@ -1,0 +1,230 @@
+{% extends 'core/base.html' %}
+{% block title %}Analizza Log Ericsson{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+
+        <!-- Header -->
+        <div class="text-center mb-4">
+            <h2 class="fw-bold text-dark">
+                <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                Analisi Log Ericsson
+            </h2>
+            <p class="text-muted">Carica un file di log (.txt o .log) per avviare l'analisi automatica</p>
+        </div>
+
+        <!-- Card Upload -->
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+
+                <!-- Drag & Drop Zone -->
+                <div id="dropZone"
+                     class="border border-2 border-dashed rounded-3 p-5 text-center"
+                     style="border-color: #0F4C81 !important; background: #f8fafc; cursor: pointer; transition: all 0.2s;">
+                    <i class="bi bi-cloud-upload display-4 text-primary mb-3 d-block"></i>
+                    <h5 class="fw-semibold">Trascina qui il file di log</h5>
+                    <p class="text-muted mb-3">oppure clicca per selezionarlo</p>
+                    <input type="file" id="fileInput" accept=".txt,.log" class="d-none">
+                    <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                        <i class="bi bi-folder2-open me-2"></i>Sfoglia file
+                    </button>
+                    <p class="text-muted mt-3 mb-0 small">Formati accettati: .txt, .log &mdash; Max 50 MB</p>
+                </div>
+
+                <!-- Info file selezionato -->
+                <div id="fileInfo" class="mt-3 d-none">
+                    <div class="alert alert-info d-flex align-items-center mb-0">
+                        <i class="bi bi-file-text-fill me-2 fs-5"></i>
+                        <div>
+                            <strong id="fileName">—</strong>
+                            <span class="text-muted ms-2 small" id="fileSize"></span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" id="btnRemoveFile">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="progressContainer" class="mt-3 d-none">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span id="progressLabel">Caricamento...</span>
+                        <span id="progressPct">0%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                             style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Bottone Analizza -->
+                <div class="mt-4">
+                    <button id="btnAnalyze" class="btn btn-primary btn-lg w-100 d-none">
+                        <i class="bi bi-cpu me-2"></i>Avvia Analisi
+                    </button>
+                </div>
+
+                <!-- Errore -->
+                <div id="errorContainer" class="mt-3 d-none">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span id="errorMsg"></span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Info parser supportati -->
+        <div class="card mt-4 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="bi bi-info-circle text-primary me-2"></i>Dati estratti automaticamente
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row row-cols-2 row-cols-md-3 g-2">
+                    {% for item in parsers_info %}
+                    <div class="col">
+                        <span class="badge bg-light text-dark border w-100 py-2">
+                            <i class="bi bi-check2-circle text-success me-1"></i>{{ item }}
+                        </span>
+                    </div>
+                    {% empty %}
+                    <div class="col"><span class="badge bg-light text-dark border">VSWR Radio Units</span></div>
+                    <div class="col"><span class="badge bg-light text-dark border">Allarmi C/M/Mi</span></div>
+                    <div class="col"><span class="badge bg-light text-dark border">FRU Temperature</span></div>
+                    <div class="col"><span class="badge bg-light text-dark border">PUSCH/PUCCH RSSI</span></div>
+                    <div class="col"><span class="badge bg-light text-dark border">RET / TMA</span></div>
+                    <div class="col"><span class="badge bg-light text-dark border">Fiber Links</span></div>
+                    <div class="col"><span class="badge bg-light text-dark border">SFP Modules</span></div>
+                    <div class="col"><span class="badge bg-light text-dark border">Branch Pairs</span></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const dropZone   = document.getElementById('dropZone');
+    const fileInput  = document.getElementById('fileInput');
+    const fileInfo   = document.getElementById('fileInfo');
+    const fileName   = document.getElementById('fileName');
+    const fileSize   = document.getElementById('fileSize');
+    const btnAnalyze = document.getElementById('btnAnalyze');
+    const btnRemove  = document.getElementById('btnRemoveFile');
+    const progressC  = document.getElementById('progressContainer');
+    const progressB  = document.getElementById('progressBar');
+    const progressPct = document.getElementById('progressPct');
+    const progressLabel = document.getElementById('progressLabel');
+    const errorC     = document.getElementById('errorContainer');
+    const errorMsg   = document.getElementById('errorMsg');
+
+    let selectedFile = null;
+
+    // Drag & Drop
+    dropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropZone.style.background = '#e3eeff';
+    });
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.style.background = '#f8fafc';
+    });
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.style.background = '#f8fafc';
+        const f = e.dataTransfer.files[0];
+        if (f) setFile(f);
+    });
+
+    fileInput.addEventListener('change', e => {
+        if (e.target.files[0]) setFile(e.target.files[0]);
+    });
+
+    function setFile(f) {
+        selectedFile = f;
+        fileName.textContent = f.name;
+        fileSize.textContent = formatSize(f.size);
+        fileInfo.classList.remove('d-none');
+        btnAnalyze.classList.remove('d-none');
+        errorC.classList.add('d-none');
+    }
+
+    btnRemove.addEventListener('click', () => {
+        selectedFile = null;
+        fileInfo.classList.add('d-none');
+        btnAnalyze.classList.add('d-none');
+        fileInput.value = '';
+    });
+
+    btnAnalyze.addEventListener('click', () => {
+        if (!selectedFile) return;
+        uploadFile(selectedFile);
+    });
+
+    function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        btnAnalyze.disabled = true;
+        btnAnalyze.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analisi in corso...';
+        progressC.classList.remove('d-none');
+        errorC.classList.add('d-none');
+
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', e => {
+            if (e.lengthComputable) {
+                const pct = Math.round((e.loaded / e.total) * 60);
+                setProgress(pct, 'Caricamento file...');
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            setProgress(90, 'Parsing in corso...');
+            try {
+                const data = JSON.parse(xhr.responseText);
+                if (data.status === 'success') {
+                    setProgress(100, 'Analisi completata!');
+                    setTimeout(() => window.location.href = data.redirect_url, 600);
+                } else {
+                    showError(data.error || 'Errore durante l\'analisi');
+                }
+            } catch (e) {
+                showError('Risposta non valida dal server');
+            }
+        });
+
+        xhr.addEventListener('error', () => showError('Errore di rete'));
+
+        xhr.open('POST', '/');
+        xhr.send(formData);
+    }
+
+    function setProgress(pct, label) {
+        progressB.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+        progressLabel.textContent = label;
+    }
+
+    function showError(msg) {
+        errorMsg.textContent = msg;
+        errorC.classList.remove('d-none');
+        progressC.classList.add('d-none');
+        btnAnalyze.disabled = false;
+        btnAnalyze.innerHTML = '<i class="bi bi-cpu me-2"></i>Avvia Analisi';
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+</script>
+{% endblock %}

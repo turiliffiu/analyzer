@@ -1,0 +1,328 @@
+{% extends 'core/base.html' %}
+{% block title %}Analisi {{ analysis.log_file.apparato_nome }} - Ericsson Analyzer{% endblock %}
+
+{% block content %}
+
+<!-- Header analisi -->
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-2">
+    <div>
+        <h4 class="fw-bold mb-1">
+            <i class="bi bi-hdd-network me-2 text-primary"></i>
+            {{ analysis.log_file.apparato_nome|default:"Apparato sconosciuto" }}
+        </h4>
+        <div class="text-muted small">
+            <i class="bi bi-calendar3 me-1"></i>{{ analysis.created_at|date:"d/m/Y H:i" }}
+            {% if analysis.log_file.sw_version %}
+            &nbsp;·&nbsp;<i class="bi bi-tag me-1"></i>SW: {{ analysis.log_file.sw_version }}
+            {% endif %}
+            {% if analysis.log_file.ip_address %}
+            &nbsp;·&nbsp;<i class="bi bi-wifi me-1"></i>{{ analysis.log_file.ip_address }}
+            {% endif %}
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/analysis/{{ analysis.id }}/export/" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel me-2"></i>Export Excel
+        </a>
+        <a href="/dashboard/" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Stat cards riassuntive -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+        <div class="card text-center p-2 border-0 shadow-sm">
+            <div class="fw-bold text-primary fs-4">{{ analysis.radio_units_count }}</div>
+            <small class="text-muted">Radio Units</small>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card text-center p-2 border-0 shadow-sm {% if analysis.alarms_critical_count > 0 %}bg-danger text-white{% endif %}">
+            <div class="fw-bold fs-4">{{ analysis.alarms_critical_count }}</div>
+            <small>Critical</small>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card text-center p-2 border-0 shadow-sm {% if analysis.alarms_major_count > 0 %}bg-warning{% endif %}">
+            <div class="fw-bold fs-4">{{ analysis.alarms_major_count }}</div>
+            <small class="text-muted">Major</small>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card text-center p-2 border-0 shadow-sm">
+            <div class="fw-bold text-info fs-4">{{ analysis.fru_count }}</div>
+            <small class="text-muted">FRU</small>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card text-center p-2 border-0 shadow-sm">
+            <div class="fw-bold text-secondary fs-4">{{ analysis.ret_count }}/{{ analysis.tma_count }}</div>
+            <small class="text-muted">RET/TMA</small>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card text-center p-2 border-0 shadow-sm">
+            <div class="fw-bold text-success fs-4">{{ analysis.fiber_links_count }}</div>
+            <small class="text-muted">Fiber Links</small>
+        </div>
+    </div>
+</div>
+
+<!-- Navigazione Tab -->
+<ul class="nav nav-tabs mb-0" id="analysisTabs">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-radio">
+        <i class="bi bi-broadcast me-1"></i>Radio VSWR
+        <span class="badge bg-primary ms-1">{{ radio_units|length }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-alarms">
+        <i class="bi bi-bell me-1"></i>Allarmi
+        <span class="badge bg-danger ms-1">{{ alarms|length }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-fru">
+        <i class="bi bi-cpu me-1"></i>FRU
+        <span class="badge bg-secondary ms-1">{{ fru_units|length }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-pusch">
+        <i class="bi bi-activity me-1"></i>PUSCH/PUCCH
+        <span class="badge bg-secondary ms-1">{{ pusch_data|length }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-ret">
+        <i class="bi bi-arrows-angle-contract me-1"></i>RET
+        <span class="badge bg-secondary ms-1">{{ ret_devices|length }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-tma">
+        <i class="bi bi-arrows-angle-expand me-1"></i>TMA
+        <span class="badge bg-secondary ms-1">{{ tma_devices|length }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-fiber">
+        <i class="bi bi-optical-audio me-1"></i>Fiber
+        <span class="badge bg-secondary ms-1">{{ fiber_links|length }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-sfp">
+        <i class="bi bi-plug me-1"></i>SFP
+        <span class="badge bg-secondary ms-1">{{ sfp_modules|length }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-branch">
+        <i class="bi bi-diagram-2 me-1"></i>Branch
+        <span class="badge bg-secondary ms-1">{{ branch_pairs|length }}</span></a></li>
+</ul>
+
+<div class="tab-content border border-top-0 rounded-bottom bg-white p-0">
+
+    <!-- TAB 1: Radio Units VSWR -->
+    <div class="tab-pane fade show active" id="tab-radio">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead class="table-primary">
+                <tr>
+                    <th>FRU</th><th>Board</th><th>RF</th><th>BP</th>
+                    <th>TX</th><th>VSWR</th><th>Ret. Loss</th><th>RX (dBm)</th><th>Stato</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for u in radio_units %}
+            <tr class="{% if u.is_vswr_critical %}row-critical{% elif u.is_vswr_warning %}row-warning{% endif %}">
+                <td class="fw-semibold">{{ u.fru }}</td>
+                <td class="text-muted">{{ u.board }}</td>
+                <td>{{ u.rf_port }}</td>
+                <td>{{ u.branch_pair }}</td>
+                <td>{% if u.tx %}{{ u.tx }} {{ u.tx_unit }}{% else %}—{% endif %}</td>
+                <td class="fw-bold {% if u.is_vswr_critical %}text-danger{% elif u.is_vswr_warning %}text-warning{% endif %}">{{ u.vswr }}</td>
+                <td>{% if u.return_loss %}{{ u.return_loss }} dB{% else %}—{% endif %}</td>
+                <td>{% if u.rx %}{{ u.rx }}{% else %}—{% endif %}</td>
+                <td>
+                    {% if u.is_vswr_critical %}<span class="badge bg-danger">CRITICAL</span>
+                    {% elif u.is_vswr_warning %}<span class="badge bg-warning text-dark">WARNING</span>
+                    {% else %}<span class="badge bg-success">OK</span>{% endif %}
+                </td>
+            </tr>
+            {% empty %}<tr><td colspan="9" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: Allarmi -->
+    <div class="tab-pane fade" id="tab-alarms">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead class="table-danger">
+                <tr><th>Severity</th><th>Alarm Nr.</th><th>Causa</th></tr>
+            </thead>
+            <tbody>
+            {% for a in alarms %}
+            <tr class="{% if a.severity == 'CRITICAL' %}row-critical{% elif a.severity == 'MAJOR' %}row-warning{% endif %}">
+                <td>
+                    {% if a.severity == 'CRITICAL' %}<span class="badge bg-danger">CRITICAL</span>
+                    {% elif a.severity == 'MAJOR' %}<span class="badge bg-warning text-dark">MAJOR</span>
+                    {% else %}<span class="badge bg-info text-dark">MINOR</span>{% endif %}
+                </td>
+                <td class="fw-bold">{{ a.alarm_number }}</td>
+                <td>{{ a.cause }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="3" class="text-center text-muted py-3">Nessun allarme ✅</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- TAB 3: FRU -->
+    <div class="tab-pane fade" id="tab-fru">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead class="table-warning">
+                <tr><th>Nome</th><th>Board</th><th>PM Temp</th><th>Temperatura</th><th>Stato</th></tr>
+            </thead>
+            <tbody>
+            {% for f in fru_units %}
+            <tr class="{% if f.is_temp_high %}row-critical{% endif %}">
+                <td class="fw-semibold">{{ f.name }}</td>
+                <td class="text-muted">{{ f.board }}</td>
+                <td>{{ f.pmtemp|default:"—" }}</td>
+                <td>{% if f.temp is not None %}{{ f.temp }} °C{% else %}—{% endif %}</td>
+                <td>{% if f.is_temp_high %}<span class="badge bg-danger">ALTA (>60°C)</span>
+                    {% else %}<span class="badge bg-success">OK</span>{% endif %}
+                </td>
+            </tr>
+            {% empty %}<tr><td colspan="5" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- TAB 4: PUSCH/PUCCH -->
+    <div class="tab-pane fade" id="tab-pusch">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead class="table-purple" style="background:#7030A0;color:white;">
+                <tr><th>Cell</th><th>SC</th><th>FRU</th><th>Board</th>
+                    <th>PUSCH</th><th>PUCCH</th><th>A</th><th>B</th><th>C</th><th>D</th><th>Δ</th><th>Stato</th></tr>
+            </thead>
+            <tbody>
+            {% for p in pusch_data %}
+            <tr class="{% if p.is_rssi_high %}row-warning{% endif %}">
+                <td class="fw-semibold">{{ p.cell }}</td>
+                <td>{{ p.sc }}</td><td>{{ p.fru }}</td><td class="text-muted">{{ p.board }}</td>
+                <td>{{ p.pusch }}</td><td>{{ p.pucch }}</td>
+                <td>{{ p.port_a|default:"—" }}</td><td>{{ p.port_b|default:"—" }}</td>
+                <td>{{ p.port_c|default:"—" }}</td><td>{{ p.port_d|default:"—" }}</td>
+                <td>{{ p.delta|default:"—" }}</td>
+                <td>{% if p.is_rssi_high %}<span class="badge bg-warning text-dark">ALTO</span>
+                    {% else %}<span class="badge bg-success">OK</span>{% endif %}</td>
+            </tr>
+            {% empty %}<tr><td colspan="12" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- TAB 5: RET -->
+    <div class="tab-pane fade" id="tab-ret">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead style="background:#00B0F0;color:white;">
+                <tr><th>Ant. Group</th><th>Near Unit</th><th>Radio Unit</th><th>Status</th><th>Device Type</th><th>Product Nr</th></tr>
+            </thead>
+            <tbody>
+            {% for r in ret_devices %}
+            <tr>
+                <td>{{ r.antenna_group }}</td><td>{{ r.antenna_near_unit }}</td>
+                <td>{{ r.radio_unit|default:"—" }}</td><td>{{ r.status }}</td>
+                <td>{{ r.device_type }}</td><td>{{ r.product_nr|default:"—" }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="6" class="text-center text-muted py-3">Nessun dispositivo RET</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- TAB 6: TMA -->
+    <div class="tab-pane fade" id="tab-tma">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead class="table-success">
+                <tr><th>Ant. Group</th><th>Near Unit</th><th>Radio Unit</th><th>Status</th><th>Device Type</th><th>Product Nr</th></tr>
+            </thead>
+            <tbody>
+            {% for t in tma_devices %}
+            <tr>
+                <td>{{ t.antenna_group }}</td><td>{{ t.antenna_near_unit }}</td>
+                <td>{{ t.radio_unit|default:"—" }}</td><td>{{ t.status }}</td>
+                <td>{{ t.device_type }}</td><td>{{ t.product_nr|default:"—" }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="6" class="text-center text-muted py-3">Nessun dispositivo TMA</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- TAB 7: Fiber Links -->
+    <div class="tab-pane fade" id="tab-fiber">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead class="table-secondary">
+                <tr><th>Link</th><th>FRU</th><th>DL Loss (dB)</th><th>UL Loss (dB)</th><th>DL Stato</th><th>UL Stato</th></tr>
+            </thead>
+            <tbody>
+            {% for f in fiber_links %}
+            <tr class="{% if f.is_dl_critical or f.is_ul_critical %}row-critical{% endif %}">
+                <td class="fw-semibold">{{ f.link }}</td><td>{{ f.fru }}</td>
+                <td>{{ f.dl_loss|default:"—" }}</td><td>{{ f.ul_loss|default:"—" }}</td>
+                <td>{% if f.is_dl_critical %}<span class="badge bg-danger">CRITICO</span>
+                    {% else %}<span class="badge bg-success">OK</span>{% endif %}</td>
+                <td>{% if f.is_ul_critical %}<span class="badge bg-danger">CRITICO</span>
+                    {% else %}<span class="badge bg-success">OK</span>{% endif %}</td>
+            </tr>
+            {% empty %}<tr><td colspan="6" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- TAB 8: SFP -->
+    <div class="tab-pane fade" id="tab-sfp">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead style="background:#BF8F00;color:white;">
+                <tr><th>Porta</th><th>FRU</th><th>Device</th><th>TX (dBm)</th><th>RX (dBm)</th><th>Temp</th><th>TN Backhaul</th><th>Stato</th></tr>
+            </thead>
+            <tbody>
+            {% for s in sfp_modules %}
+            <tr class="{% if s.is_rx_critical %}row-critical{% endif %}">
+                <td class="fw-semibold">{{ s.port }}</td><td>{{ s.fru }}</td>
+                <td>{{ s.device_name|default:"—" }}</td>
+                <td>{{ s.tx_dbm|default:"—" }}</td>
+                <td class="{% if s.is_rx_critical %}text-danger fw-bold{% endif %}">{{ s.rx_dbm|default:"—" }}</td>
+                <td>{% if s.temperature %}{{ s.temperature }} °C{% else %}—{% endif %}</td>
+                <td>{% if s.is_tn_backhaul %}<span class="badge bg-info text-dark">TN</span>
+                    {% else %}—{% endif %}</td>
+                <td>{% if s.is_rx_critical %}<span class="badge bg-danger">RX BASSO</span>
+                    {% else %}<span class="badge bg-success">OK</span>{% endif %}</td>
+            </tr>
+            {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- TAB 9: Branch Pairs -->
+    <div class="tab-pane fade" id="tab-branch">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead style="background:#243F60;color:white;">
+                <tr><th>FRU</th><th>Board</th><th>RF Port</th><th>Branch Pair</th><th>Risultato</th></tr>
+            </thead>
+            <tbody>
+            {% for b in branch_pairs %}
+            <tr class="{% if b.is_critical %}row-critical{% elif b.is_warning %}row-warning{% else %}row-ok{% endif %}">
+                <td class="fw-semibold">{{ b.fru }}</td>
+                <td class="text-muted">{{ b.board }}</td>
+                <td>{{ b.rf_port }}</td><td>{{ b.branch_pair }}</td>
+                <td>
+                    {% if b.is_critical %}<span class="badge bg-danger">NOK</span>
+                    {% elif b.is_warning %}<span class="badge bg-warning text-dark">OKW</span>
+                    {% else %}<span class="badge bg-success">OK</span>{% endif %}
+                </td>
+            </tr>
+            {% empty %}<tr><td colspan="5" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+</div><!-- /tab-content -->
+{% endblock %}

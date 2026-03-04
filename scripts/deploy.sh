@@ -27,7 +27,7 @@ APP_DIR="/opt/${APP_NAME}"
 VENV_DIR="${APP_DIR}/venv"
 REPO_URL="${REPO_URL:-}"   # Imposta con: export REPO_URL=https://github.com/...
 USER_APP="www-data"
-DOMAIN="${DOMAIN:-localhost}"
+DOMAIN="${DOMAIN:-$(hostname -I | awk '{print $1}')}"
 DJANGO_PORT="8000"
 
 DB_NAME="ericsson_db"

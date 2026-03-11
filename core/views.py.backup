@@ -1,7 +1,6 @@
 """
 Views - Ericsson Universal Log Analyzer
 """
-from django.views import View
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import TemplateView, DetailView, ListView
 from django.http import JsonResponse, HttpResponse
@@ -297,38 +296,3 @@ class ExportExcelView(LoginRequiredMixin, DetailView):
         )
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
-
-
-# ============================================
-# DELETE VIEWS
-# ============================================
-
-class DeleteAnalysisView(View):
-    """Elimina una singola analisi"""
-    
-    def post(self, request, pk):
-        try:
-            analysis = Analysis.objects.get(pk=pk)
-            apparato = analysis.log_file.apparato_nome
-            analysis.delete()
-            messages.success(request, f'✅ Analisi apparato {apparato} eliminata con successo')
-        except Analysis.DoesNotExist:
-            messages.error(request, '❌ Analisi non trovata')
-        except Exception as e:
-            messages.error(request, f'❌ Errore durante eliminazione: {str(e)}')
-        
-        return redirect('core:dashboard')
-
-
-class DeleteAllAnalysesView(View):
-    """Elimina tutte le analisi"""
-    
-    def post(self, request):
-        try:
-            count = Analysis.objects.count()
-            Analysis.objects.all().delete()
-            messages.success(request, f'✅ {count} analisi eliminate con successo')
-        except Exception as e:
-            messages.error(request, f'❌ Errore durante eliminazione: {str(e)}')
-        
-        return redirect('core:dashboard')

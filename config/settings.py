@@ -104,3 +104,9 @@ LOGGING = {
         'level': 'WARNING',
     },
 }
+
+# CSRF TRUSTED ORIGINS (necessario per Django 4.0+)
+CSRF_TRUSTED_ORIGINS = [
+    'https://analyzer.tgs.ovh',
+    'http://analyzer.tgs.ovh',
+]

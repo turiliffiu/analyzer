@@ -65,7 +65,7 @@ class UploadView(LoginRequiredMixin, TemplateView):
             )
 
             # Parse e salva tutto in database (transazione atomica)
-            analysis = self._parse_and_save(log_file, content)
+            analysis = self._parse_and_save(log_file, content, request.user)
 
             return JsonResponse({
                 'status': 'success',
@@ -81,7 +81,7 @@ class UploadView(LoginRequiredMixin, TemplateView):
             }, status=500)
 
     @transaction.atomic
-    def _parse_and_save(self, log_file, content):
+    def _parse_and_save(self, log_file, content, user):
         """Parsa log ed esegue tutti i parser salvando su DB"""
 
         # Estrai metadati apparato
@@ -95,7 +95,7 @@ class UploadView(LoginRequiredMixin, TemplateView):
         log_file.save()
 
         # Crea oggetto Analysis
-        analysis = Analysis.objects.create(log_file=log_file, user=request.user)
+        analysis = Analysis.objects.create(log_file=log_file, user=user)
 
         # --- 1. Radio Units (VSWR) ---
         radio_parser = RadioParser(content)

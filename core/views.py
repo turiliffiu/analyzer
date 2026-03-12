@@ -1,3 +1,4 @@
+from django.contrib.auth.views import LoginView, LogoutView
 """
 Views - Ericsson Universal Log Analyzer
 """
@@ -8,6 +9,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.contrib import messages
+from django.contrib.auth.views import LoginView, LogoutView
 
 from .models import (
     LogFile, Analysis, RadioUnit, Alarm, FRU, PuschData,
@@ -319,6 +321,24 @@ class ExportExcelView(LoginRequiredMixin, DetailView):
 
 # ============================================
 # DELETE VIEWS
+
+
+# ============================================
+# AUTHENTICATION VIEWS
+# ============================================
+
+class CustomLoginView(LoginView):
+    """Login view personalizzata"""
+    template_name = 'core/login.html'
+    redirect_authenticated_user = True
+    
+    def get_success_url(self):
+        return '/dashboard/'
+
+
+class CustomLogoutView(LogoutView):
+    """Logout view personalizzata"""
+    next_page = '/login/'
 # ============================================
 
 

@@ -1,0 +1,79 @@
+{% extends 'core/base.html' %}
+{% block title %}Login - Ericsson Analyzer{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center py-3">
+                <h4 class="mb-0">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    Ericsson Log Analyzer
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                {% if form.errors %}
+                <div class="alert alert-danger" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Errore!</strong> Nome utente o password non corretti.
+                </div>
+                {% endif %}
+
+                {% if next %}
+                    {% if user.is_authenticated %}
+                    <div class="alert alert-warning">
+                        Non hai i permessi per accedere a questa pagina.
+                    </div>
+                    {% endif %}
+                {% endif %}
+
+                <form method="post" action="{% url 'core:login' %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">
+                            <i class="bi bi-person me-1"></i>Nome utente
+                        </label>
+                        <input type="text" 
+                               name="username" 
+                               class="form-control form-control-lg" 
+                               id="id_username" 
+                               placeholder="Inserisci username"
+                               autocomplete="username"
+                               required 
+                               autofocus>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="id_password" class="form-label">
+                            <i class="bi bi-key me-1"></i>Password
+                        </label>
+                        <input type="password" 
+                               name="password" 
+                               class="form-control form-control-lg" 
+                               id="id_password" 
+                               placeholder="Inserisci password"
+                               autocomplete="current-password"
+                               required>
+                    </div>
+
+                    <input type="hidden" name="next" value="{{ next }}" />
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Accedi
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center text-muted py-3">
+                <small>
+                    <i class="bi bi-info-circle me-1"></i>
+                    Accesso riservato al personale tecnico FiberCop TGS
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

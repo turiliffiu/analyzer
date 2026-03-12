@@ -8,19 +8,12 @@ from .views import (
     AnalysisDetailView,
     ExportExcelView,
     DeleteAnalysisView,
-    DeleteAllAnalysesView,
-    CustomLoginView,
-    CustomLogoutView
+    DeleteAllAnalysesView
 )
 
 app_name = 'core'
 
 urlpatterns = [
-    # Auth
-    path('login/', CustomLoginView.as_view(), name='login'),
-    path('logout/', CustomLogoutView.as_view(), name='logout'),
-    
-    # App
     path('', UploadView.as_view(), name='upload'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('analysis/<int:pk>/', AnalysisDetailView.as_view(), name='analysis_detail'),

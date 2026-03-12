@@ -67,27 +67,3 @@ admin.site.register(BranchPair)
 admin.site.site_header = "Ericsson Log Analyzer"
 admin.site.site_title = "Ericsson Analyzer"
 admin.site.index_title = "Pannello Amministrazione"
-
-
-# UserProfile Admin
-from .models import UserProfile
-
-@admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'role', 'created_at']
-    list_filter = ['role', 'created_at']
-    search_fields = ['user__username', 'user__email']
-    readonly_fields = ['created_at']
-    
-    fieldsets = (
-        ('Utente', {
-            'fields': ('user',)
-        }),
-        ('Ruolo e Permessi', {
-            'fields': ('role',)
-        }),
-        ('Info', {
-            'fields': ('created_at',),
-            'classes': ('collapse',)
-        }),
-    )

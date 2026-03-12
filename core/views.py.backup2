@@ -58,10 +58,10 @@ class UploadView(LoginRequiredMixin, TemplateView):
 
             # Crea record LogFile
             log_file = LogFile.objects.create(
+                uploaded_by=request.user,
                 filename=log_file_obj.name,
                 file=log_file_obj,
-                file_size=log_file_obj.size,
-                uploaded_by=request.user
+                file_size=log_file_obj.size
             )
 
             # Parse e salva tutto in database (transazione atomica)
@@ -95,7 +95,7 @@ class UploadView(LoginRequiredMixin, TemplateView):
         log_file.save()
 
         # Crea oggetto Analysis
-        analysis = Analysis.objects.create(log_file=log_file, user=request.user)
+        analysis = Analysis.objects.create(log_file=log_file)
 
         # --- 1. Radio Units (VSWR) ---
         radio_parser = RadioParser(content)
@@ -237,17 +237,6 @@ class DashboardView(LoginRequiredMixin, ListView):
     paginate_by = 20
     ordering = ['-created_at']
 
-    def get_queryset(self):
-        """Filtra analisi in base al ruolo utente"""
-        user = self.request.user
-        
-        # Admin vede tutto
-        if user.is_superuser or (hasattr(user, 'profile') and user.profile.is_admin()):
-            return Analysis.objects.all().select_related('log_file').order_by('-created_at')
-        
-        # Tecnico e Viewer vedono solo le proprie
-        return Analysis.objects.filter(user=user).select_related('log_file').order_by('-created_at')
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Statistiche globali aggregate
@@ -266,13 +255,6 @@ class AnalysisDetailView(LoginRequiredMixin, DetailView):
     model = Analysis
     template_name = 'core/analysis_detail.html'
     context_object_name = 'analysis'
-
-    def get_queryset(self):
-        """Filtra analisi - admin vede tutto, altri solo proprie"""
-        user = self.request.user
-        if user.is_superuser or (hasattr(user, 'profile') and user.profile.is_admin()):
-            return Analysis.objects.all()
-        return Analysis.objects.filter(user=user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -321,23 +303,12 @@ class ExportExcelView(LoginRequiredMixin, DetailView):
 # DELETE VIEWS
 # ============================================
 
-
 class DeleteAnalysisView(View):
     """Elimina una singola analisi"""
     
     def post(self, request, pk):
         try:
             analysis = Analysis.objects.get(pk=pk)
-            
-            # Verifica ownership (admin può eliminare tutto, altri solo proprie)
-            user = request.user
-            if not user.is_superuser:
-                if hasattr(user, 'profile') and user.profile.is_admin():
-                    pass  # Admin può eliminare tutto
-                elif analysis.user != user:
-                    messages.error(request, '❌ Non hai i permessi per eliminare questa analisi')
-                    return redirect('core:dashboard')
-            
             apparato = analysis.log_file.apparato_nome
             analysis.delete()
             messages.success(request, f'✅ Analisi apparato {apparato} eliminata con successo')
@@ -354,20 +325,9 @@ class DeleteAllAnalysesView(View):
     
     def post(self, request):
         try:
-            user = request.user
-            
-            # Admin può eliminare tutto, altri solo le proprie
-            if user.is_superuser or (hasattr(user, 'profile') and user.profile.is_admin()):
-                analyses = Analysis.objects.all()
-            else:
-                analyses = Analysis.objects.filter(user=user)
-            
-            count = analyses.count()
-            if count > 0:
-                analyses.delete()
-                messages.success(request, f'✅ {count} analisi eliminate con successo')
-            else:
-                messages.info(request, 'ℹ️ Nessuna analisi da eliminare')
+            count = Analysis.objects.count()
+            Analysis.objects.all().delete()
+            messages.success(request, f'✅ {count} analisi eliminate con successo')
         except Exception as e:
             messages.error(request, f'❌ Errore durante eliminazione: {str(e)}')
         

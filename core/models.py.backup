@@ -34,7 +34,6 @@ class Analysis(models.Model):
     """Analisi completa di un log file"""
     
     log_file = models.OneToOneField(LogFile, on_delete=models.CASCADE, related_name='analysis')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='analyses', null=True)  # null=True temporaneo per migration
     created_at = models.DateTimeField(auto_now_add=True)
     
     # Statistiche globali
@@ -292,41 +291,3 @@ class BranchPair(models.Model):
     
     def __str__(self):
         return f"{self.fru} {self.rf_port} - {self.result}"
-
-
-class UserProfile(models.Model):
-    """Profilo esteso utente con ruoli"""
-    
-    ROLE_CHOICES = [
-        ('admin', 'Amministratore'),
-        ('tecnico', 'Tecnico'),
-        ('viewer', 'Visualizzatore'),
-    ]
-    
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='tecnico')
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        verbose_name = "Profilo Utente"
-        verbose_name_plural = "Profili Utenti"
-    
-    def __str__(self):
-        return f"{self.user.username} ({self.get_role_display()})"
-    
-    def is_admin(self):
-        return self.role == 'admin' or self.user.is_superuser
-    
-    def is_tecnico(self):
-        return self.role == 'tecnico'
-    
-    def is_viewer(self):
-        return self.role == 'viewer'
-    
-    def can_edit(self):
-        """Può creare/modificare analisi"""
-        return self.role in ['admin', 'tecnico']
-    
-    def can_delete(self):
-        """Può eliminare analisi"""
-        return self.role == 'admin' or self.role == 'tecnico'

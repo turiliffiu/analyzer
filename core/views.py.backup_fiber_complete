@@ -327,7 +327,6 @@ class AnalysisDetailView(LoginRequiredMixin, DetailView):
         context['pusch_data'] = analysis.pusch_data.all()
         context['ret_devices'] = analysis.ret_devices.all()
         context['tma_devices'] = analysis.tma_devices.all()
-        context['fiber_links'] = analysis.fiber_links.all()
         context['tn_backhaul'] = analysis.tn_backhaul.all()
         context['sfp_modules'] = analysis.sfp_modules.all()
         context['branch_pairs'] = analysis.branch_pairs.all()

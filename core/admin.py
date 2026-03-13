@@ -50,7 +50,7 @@ class PuschDataAdmin(admin.ModelAdmin):
 
 @admin.register(FiberLink)
 class FiberLinkAdmin(admin.ModelAdmin):
-    list_display = ['analysis', 'link', 'fru', 'dl_loss', 'ul_loss', 'is_dl_critical']
+    list_display = ['link_id', 'link_status', 'ril', 'dl_loss', 'ul_loss', 'length', 'is_dl_critical', 'is_ul_critical']
     list_filter = ['is_dl_critical', 'is_ul_critical']
 
 

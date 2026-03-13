@@ -225,46 +225,30 @@ class TMADevice(models.Model):
 
 
 class FiberLink(models.Model):
-    """Collegamento Fibra Ottica - dati completi entrambi i lati"""
+    """Collegamento Fibra Ottica"""
     
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='fiber_links')
     
-    # Identificazione
-    link_id = models.CharField(max_length=10)  # 1, 2, 3
-    link_status = models.CharField(max_length=10)  # Up, Down
-    ril = models.CharField(max_length=50)  # S210-1, S110-1
+    link = models.CharField(max_length=50)
+    fru = models.CharField(max_length=50)
     
-    # Lato 1 (Master/BB)
-    wl1 = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)  # 1310.00
-    temp1 = models.IntegerField(null=True, blank=True)  # 46 (estratto da "46C")
-    txbs1 = models.IntegerField(null=True, blank=True)  # 42 (estratto da "42%")
-    txdbm1 = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)  # -2.77
-    rxdbm1 = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)  # -1.94
-    
-    # Lato 2 (Slave/RRU)
-    wl2 = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)  # 1310.00
-    temp2 = models.IntegerField(null=True, blank=True)  # 38
-    txbs2 = models.IntegerField(null=True, blank=True)  # 40
-    txdbm2 = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)  # -3.36
-    rxdbm2 = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)  # -2.68
-    
-    # Loss e dati link
-    dl_loss = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)  # -0.09
-    ul_loss = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)  # -1.42
-    length = models.CharField(max_length=20, blank=True)  # 52m, 100m
+    # Loss values
+    dl_loss = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    ul_loss = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     
     # Flags
-    is_dl_critical = models.BooleanField(default=False)  # |DlLoss| > 3.5
-    is_ul_critical = models.BooleanField(default=False)  # |UlLoss| > 3.5
-    is_link_down = models.BooleanField(default=False)  # link_status != Up
+    is_dl_critical = models.BooleanField(default=False)  # > 3.5 dB
+    is_ul_critical = models.BooleanField(default=False)  # > 3.5 dB
     
     class Meta:
-        ordering = ['link_id']
-        verbose_name = "Fiber Link"
-        verbose_name_plural = "Fiber Links"
+        ordering = ['link']
+        verbose_name = "Link Fibra"
+        verbose_name_plural = "Link Fibra"
     
     def __str__(self):
-        return f"Link {self.link_id} - {self.ril}"
+        return f"{self.link} - {self.fru}"
+
+
 class SFPModule(models.Model):
     """Modulo SFP"""
     

@@ -97,11 +97,11 @@
         <i class="bi bi-plug me-1"></i>SFP
         <span class="badge bg-secondary ms-1">{{ sfp_modules|length }}</span></a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-branch">
-        <i class="bi bi-diagram-2 me-1"></i>Branch
-        <span class="badge bg-secondary ms-1">{{ branch_pairs|length }}</span></a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-tn">
         <i class="bi bi-hdd-network me-1"></i>TN Backhaul
         <span class="badge bg-secondary ms-1">{{ tn_backhaul|length }}</span></a></li>
+        <i class="bi bi-diagram-2 me-1"></i>Branch
+        <span class="badge bg-secondary ms-1">{{ branch_pairs|length }}</span></a></li>
 </ul>
 
 <div class="tab-content border border-top-0 rounded-bottom bg-white p-0">
@@ -276,56 +276,24 @@
         <div class="table-responsive">
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead class="table-secondary">
-                <tr>
-                    <th rowspan="2">Link</th><th rowspan="2">Status</th><th rowspan="2">RiL</th>
-                    <th colspan="5" class="text-center" style="border-left:2px solid #dee2e6;">Lato 1 (BB)</th>
-                    <th colspan="5" class="text-center" style="border-left:2px solid #dee2e6;">Lato 2 (RRU)</th>
-                    <th rowspan="2" style="border-left:2px solid #dee2e6;">DL Loss</th>
-                    <th rowspan="2">UL Loss</th>
-                    <th rowspan="2">Length</th>
-                    <th rowspan="2">Status</th>
-                </tr>
-                <tr>
-                    <th style="border-left:2px solid #dee2e6;">WL</th><th>Temp</th><th>TXbs</th><th>TX dBm</th><th>RX dBm</th>
-                    <th style="border-left:2px solid #dee2e6;">WL</th><th>Temp</th><th>TXbs</th><th>TX dBm</th><th>RX dBm</th>
-                </tr>
+                <tr><th>Link</th><th>FRU</th><th>DL Loss (dB)</th><th>UL Loss (dB)</th><th>DL Stato</th><th>UL Stato</th></tr>
             </thead>
             <tbody>
             {% for f in fiber_links %}
-            <tr class="{% if f.is_link_down %}row-critical{% elif f.is_dl_critical or f.is_ul_critical %}row-warning{% endif %}">
-                <td class="fw-semibold">{{ f.link_id }}</td>
-                <td><span class="badge {% if f.link_status == 'Up' %}bg-success{% else %}bg-danger{% endif %}">{{ f.link_status }}</span></td>
-                <td>{{ f.ril }}</td>
-                <td class="text-end" style="border-left:2px solid #dee2e6;">{{ f.wl1|default:"—" }}</td>
-                <td class="text-end">{{ f.temp1|default:"—" }}{% if f.temp1 %}°C{% endif %}</td>
-                <td class="text-end">{{ f.txbs1|default:"—" }}{% if f.txbs1 %}%{% endif %}</td>
-                <td class="text-end">{{ f.txdbm1|default:"—" }}</td>
-                <td class="text-end">{{ f.rxdbm1|default:"—" }}</td>
-                <td class="text-end" style="border-left:2px solid #dee2e6;">{{ f.wl2|default:"—" }}</td>
-                <td class="text-end">{{ f.temp2|default:"—" }}{% if f.temp2 %}°C{% endif %}</td>
-                <td class="text-end">{{ f.txbs2|default:"—" }}{% if f.txbs2 %}%{% endif %}</td>
-                <td class="text-end">{{ f.txdbm2|default:"—" }}</td>
-                <td class="text-end">{{ f.rxdbm2|default:"—" }}</td>
-                <td class="text-end {% if f.is_dl_critical %}text-danger fw-bold{% endif %}" style="border-left:2px solid #dee2e6;">{{ f.dl_loss|default:"—" }}</td>
-                <td class="text-end {% if f.is_ul_critical %}text-danger fw-bold{% endif %}">{{ f.ul_loss|default:"—" }}</td>
-                <td>{{ f.length|default:"—" }}</td>
-                <td>
-                    {% if f.is_link_down %}
-                        <span class="badge bg-danger">DOWN</span>
-                    {% elif f.is_dl_critical or f.is_ul_critical %}
-                        <span class="badge bg-warning text-dark">Loss Critical</span>
-                    {% else %}
-                        <span class="badge bg-success">OK</span>
-                    {% endif %}
-                </td>
+            <tr class="{% if f.is_dl_critical or f.is_ul_critical %}row-critical{% endif %}">
+                <td class="fw-semibold">{{ f.link }}</td><td>{{ f.fru }}</td>
+                <td>{{ f.dl_loss|default:"—" }}</td><td>{{ f.ul_loss|default:"—" }}</td>
+                <td>{% if f.is_dl_critical %}<span class="badge bg-danger">CRITICO</span>
+                    {% else %}<span class="badge bg-success">OK</span>{% endif %}</td>
+                <td>{% if f.is_ul_critical %}<span class="badge bg-danger">CRITICO</span>
+                    {% else %}<span class="badge bg-success">OK</span>{% endif %}</td>
             </tr>
-            {% empty %}
-            <tr><td colspan="16" class="text-center text-muted py-3">Nessun dato Fiber</td></tr>
-            {% endfor %}
+            {% empty %}<tr><td colspan="6" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
     </div>
+
     <!-- TAB 8: SFP -->
     <div class="tab-pane fade" id="tab-sfp">
         <div class="table-responsive">

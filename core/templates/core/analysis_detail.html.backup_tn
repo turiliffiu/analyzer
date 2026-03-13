@@ -97,9 +97,6 @@
         <i class="bi bi-plug me-1"></i>SFP
         <span class="badge bg-secondary ms-1">{{ sfp_modules|length }}</span></a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-branch">
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-tn">
-        <i class="bi bi-hdd-network me-1"></i>TN Backhaul
-        <span class="badge bg-secondary ms-1">{{ tn_backhaul|length }}</span></a></li>
         <i class="bi bi-diagram-2 me-1"></i>Branch
         <span class="badge bg-secondary ms-1">{{ branch_pairs|length }}</span></a></li>
 </ul>
@@ -327,50 +324,5 @@
         </div>
     </div>
 
-
-    <!-- TAB 10: TN Backhaul -->
-    <div class="tab-pane fade" id="tab-tn">
-        <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle mb-0 small">
-            <thead style="background:#243F60;color:white;">
-                <tr>
-                    <th>Port</th><th>Board</th><th>Vendor</th><th>Product</th>
-                    <th>Serial</th><th>WL</th><th>Temp</th>
-                    <th>TX dBm</th><th>RX dBm</th><th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for tn in tn_backhaul %}
-            <tr class="{% if tn.is_rx_critical %}row-critical{% elif not tn.has_optical_data %}row-warning{% else %}row-ok{% endif %}">
-                <td class="fw-semibold">{{ tn.port }}</td>
-                <td class="text-muted">{{ tn.board }}</td>
-                <td>{{ tn.vendor }}</td>
-                <td class="small">{{ tn.vendor_product }}</td>
-                <td class="small text-muted">{{ tn.serial }}</td>
-                <td>{{ tn.wavelength|default:"N/A" }}</td>
-                <td>{{ tn.temperature|default:"N/A" }}{% if tn.temperature %}°C{% endif %}</td>
-                <td class="{% if tn.tx_dbm and tn.tx_dbm < -5 %}text-warning{% endif %}">
-                    {{ tn.tx_dbm|default:"N/A" }}{% if tn.tx_dbm %}dBm{% endif %}
-                </td>
-                <td class="{% if tn.is_rx_critical %}text-danger fw-bold{% endif %}">
-                    {{ tn.rx_dbm|default:"N/A" }}{% if tn.rx_dbm %}dBm{% endif %}
-                </td>
-                <td>
-                    {% if tn.is_rx_critical %}
-                        <span class="badge bg-danger">RX Critical</span>
-                    {% elif not tn.has_optical_data %}
-                        <span class="badge bg-warning text-dark">No Optical</span>
-                    {% else %}
-                        <span class="badge bg-success">OK</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="10" class="text-center text-muted py-3">Nessun dato TN Backhaul</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        </div>
-    </div>
 </div><!-- /tab-content -->
 {% endblock %}

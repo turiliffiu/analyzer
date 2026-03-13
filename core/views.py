@@ -13,7 +13,8 @@ from django.contrib.auth.views import LoginView, LogoutView
 
 from .models import (
     LogFile, Analysis, RadioUnit, Alarm, FRU, PuschData,
-    RETDevice, TMADevice, FiberLink, SFPModule, BranchPair
+    RETDevice, TMADevice, FiberLink, SFPModule, BranchPair,
+    TNBackhaul,
 )
 from .forms import LogFileUploadForm
 
@@ -27,6 +28,7 @@ from parsers.ret_parser import RETParser
 from parsers.fiber_parser import FiberParser
 from parsers.sfp_parser import SFPParser
 from parsers.branch_parser import BranchParser
+from parsers.tn_backhaul_parser import TNBackhaulParser
 
 
 class UploadView(LoginRequiredMixin, TemplateView):
@@ -214,6 +216,30 @@ class UploadView(LoginRequiredMixin, TemplateView):
                 is_critical=item.get('is_critical', False),
             )
 
+
+        # --- 10. TN Backhaul ---
+        tn_parser = TNBackhaulParser(content)
+        tn_data = tn_parser.parse()
+        for item in tn_data:
+            TNBackhaul.objects.create(
+                analysis=analysis,
+                board=item["board"],
+                lnh=item["lnh"],
+                port=item["port"],
+                vendor=item["vendor"],
+                vendor_product=item["vendor_product"],
+                revision=item["revision"],
+                serial=item["serial"],
+                date=item["date"],
+                ericsson_product=item["ericsson_product"],
+                wavelength=item.get("wavelength"),
+                temperature=item.get("temperature"),
+                tx_bias=item.get("tx_bias"),
+                tx_dbm=item.get("tx_dbm"),
+                rx_dbm=item.get("rx_dbm"),
+                is_rx_critical=item.get("is_rx_critical", False),
+                has_optical_data=item.get("has_optical_data", False),
+            )
         # --- Aggiorna contatori statistici sull'Analysis ---
         analysis.radio_units_count = len(radio_data)
         analysis.alarms_critical_count = sum(1 for a in alarm_data if a['severity'] == 'CRITICAL')
@@ -289,7 +315,7 @@ class AnalysisDetailView(LoginRequiredMixin, DetailView):
         context['pusch_data'] = analysis.pusch_data.all()
         context['ret_devices'] = analysis.ret_devices.all()
         context['tma_devices'] = analysis.tma_devices.all()
-        context['fiber_links'] = analysis.fiber_links.all()
+        context['tn_backhaul'] = analysis.tn_backhaul.all()
         context['sfp_modules'] = analysis.sfp_modules.all()
         context['branch_pairs'] = analysis.branch_pairs.all()
 

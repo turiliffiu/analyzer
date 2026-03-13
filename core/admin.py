@@ -91,3 +91,12 @@ class UserProfileAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+# TNBackhaul Admin
+from .models import TNBackhaul
+
+@admin.register(TNBackhaul)
+class TNBackhaulAdmin(admin.ModelAdmin):
+    list_display = ['port', 'board', 'vendor', 'vendor_product', 'tx_dbm', 'rx_dbm', 'temperature', 'has_optical_data', 'is_rx_critical']
+    list_filter = ['vendor', 'has_optical_data', 'is_rx_critical']
+    search_fields = ['port', 'serial', 'vendor_product']

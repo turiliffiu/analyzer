@@ -274,18 +274,6 @@ class SFPModule(models.Model):
     fru = models.CharField(max_length=50)
     device_name = models.CharField(max_length=100)
     
-    # Identificazione completa
-    ril = models.CharField(max_length=50, blank=True)  # S210-1
-    board = models.CharField(max_length=100, blank=True)  # BB6648
-    lnh = models.CharField(max_length=20, blank=True)  # 000100
-    vendor = models.CharField(max_length=100, blank=True)  # ERICSSON
-    rev = models.CharField(max_length=20, blank=True)  # 1.0
-    serial = models.CharField(max_length=50, blank=True)  # PM85275441
-    date = models.CharField(max_length=20, blank=True)  # 20211020
-    ericsson_product = models.CharField(max_length=100, blank=True)  # RDH10265/2 R1A
-    wl = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)  # 1310.00
-    txbs = models.IntegerField(null=True, blank=True)  # 42 (estratto da 42%)
-    
     # Valori
     tx_dbm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     rx_dbm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)

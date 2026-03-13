@@ -1,4 +1,4 @@
-"""Parser SFP Modules - formato reale log Ericsson"""
+"""Parser SFP Modules - estrazione completa tutti i campi"""
 import re
 
 
@@ -11,7 +11,6 @@ class SFPParser:
         in_sfp = False
 
         for line in self.lines:
-            # Header reale univoco: contiene "SFPLNH" che non esiste nella tabella Fiber
             if 'SFPLNH' in line and 'TXdBm' in line and 'RXdBm' in line:
                 in_sfp = True
                 continue
@@ -32,60 +31,124 @@ class SFPParser:
         return data
 
     def _parse_row(self, line):
-        # Formato normale: " 1 S220-1 BB6631  000100  1  ERICSSON  SPP10ELRIDFSEN  10  ...  1310.00 44C  45%  -2.79  -2.48"
-        # Formato TN:      "TN        BB6631  000100  IB ERICSSON  EOLS-...         ...  1310    34C  24%  -5.56  -7.93"
+        """
+        Formato riga SFP - ERICSSON_PRODUCT può essere multi-word!
+        ID RiL    BOARD       SFPLNH  PORT VENDOR    VENDORPROD   REV  SERIAL    DATE     ERICSSONPROD   WL   TEMP TXbs TXdBm RXdBm
+         1 S210-1 BB6648      000100     1 ERICSSON  EOLP-...     1.0  PM852...  20211020 RDH10265/2 R1A 1310 46C  42%  -2.77 -1.94
+        """
         parts = line.split()
-        if len(parts) < 8:
+        if len(parts) < 15:
             return None
 
         is_tn = parts[0] == 'TN'
 
-        if not is_tn and not parts[0].isdigit():
-            return None
-
         if is_tn:
-            # TN  BOARD  LNH  PORT  VENDOR ...
-            fru = parts[1]
+            board = parts[1]
             lnh = parts[2]
             port_nr = parts[3]
-            vendor_prod = parts[5] if len(parts) > 5 else '-'
+            vendor = parts[4]
+            vendor_prod = parts[5]
+            rev = parts[6]
+            serial = parts[7]
+            date = parts[8]
+            # ERICSSON_PRODUCT: da parts[9] fino a prima di WL
+            # WL è il primo numero tipo 1310.00 o 1310 o 1550
+            wl_idx = self._find_wavelength_index(parts, 9)
+            if wl_idx:
+                ericsson_product = ' '.join(parts[9:wl_idx])
+            else:
+                ericsson_product = parts[9]
+                wl_idx = 10
+            ril = ''
         else:
-            # ID  RiL  BOARD  LNH  PORT  VENDOR ...
-            fru = parts[2]
+            if not parts[0].isdigit():
+                return None
+            ril = parts[1]
+            board = parts[2]
             lnh = parts[3]
             port_nr = parts[4]
-            vendor_prod = parts[6] if len(parts) > 6 else '-'
+            vendor = parts[5]
+            vendor_prod = parts[6]
+            rev = parts[7]
+            serial = parts[8]
+            date = parts[9]
+            # ERICSSON_PRODUCT: da parts[10] fino a prima di WL
+            wl_idx = self._find_wavelength_index(parts, 10)
+            if wl_idx:
+                ericsson_product = ' '.join(parts[10:wl_idx])
+            else:
+                ericsson_product = parts[10]
+                wl_idx = 11
 
         port = f'{lnh}/{port_nr}'
-
-        # Temperatura: cerca NNC o NC (es: 44C, 34C)
+        
+        # Estrai WL, TEMP, TXbs, TX, RX da wl_idx in poi
+        remaining = parts[wl_idx:]
+        
+        wl = None
         temp = None
-        temp_match = re.search(r'\b(\d+)C\b', line)
-        if temp_match:
-            try:
-                temp = int(temp_match.group(1))
-            except ValueError:
-                pass
+        txbs = None
+        tx_dbm = None
+        rx_dbm = None
 
-        # TXdBm e RXdBm: ultimi due valori negativi o float prima di BER
-        # Cerchiamo tutti i float con segno opzionale
-        float_matches = re.findall(r'(-?\d+\.\d+)', line)
-        tx_dbm, rx_dbm = None, None
-        # Gli ultimi due float della riga sono TXdBm e RXdBm
-        if len(float_matches) >= 2:
-            try:
-                tx_dbm = float(float_matches[-2])
-                rx_dbm = float(float_matches[-1])
-            except ValueError:
-                pass
+        if len(remaining) >= 5:
+            wl = self._parse_float(remaining[0])
+            temp = self._parse_temp(remaining[1])
+            txbs = self._parse_percent(remaining[2])
+            tx_dbm = self._parse_float(remaining[3])
+            rx_dbm = self._parse_float(remaining[4])
+
+        is_rx_critical = rx_dbm is not None and rx_dbm < -25
 
         return {
             'port': port,
-            'fru': fru,
+            'fru': board,
             'device_name': vendor_prod,
+            'ril': ril,
+            'board': board,
+            'lnh': lnh,
+            'vendor': vendor,
+            'rev': rev,
+            'serial': serial,
+            'date': date,
+            'ericsson_product': ericsson_product,
+            'wl': wl,
+            'temperature': temp,
+            'txbs': txbs,
             'tx_dbm': tx_dbm,
             'rx_dbm': rx_dbm,
-            'temperature': temp,
             'is_tn_backhaul': is_tn,
-            'is_rx_critical': rx_dbm is not None and rx_dbm < -25,
+            'is_rx_critical': is_rx_critical,
         }
+
+    def _find_wavelength_index(self, parts, start_idx):
+        """Trova indice di WL (1310, 1310.00, 1550, etc)"""
+        for i in range(start_idx, len(parts)):
+            # WL è un numero 1000-2000 (nm)
+            if re.match(r'^(13\d{2}|15\d{2}|16\d{2})(\.\d+)?$', parts[i]):
+                return i
+        return None
+
+    def _parse_float(self, value):
+        try:
+            return float(value)
+        except (ValueError, AttributeError):
+            return None
+
+    def _parse_temp(self, value):
+        match = re.match(r'(\d+)C?', str(value))
+        if match:
+            try:
+                return int(match.group(1))
+            except ValueError:
+                pass
+        return None
+
+    def _parse_percent(self, value):
+        match = re.match(r'(\d+)%?', str(value))
+        if match:
+            try:
+                return int(match.group(1))
+            except ValueError:
+                pass
+        return None

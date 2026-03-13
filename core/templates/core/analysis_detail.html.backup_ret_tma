@@ -218,16 +218,16 @@
         <div class="table-responsive">
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead style="background:#00B0F0;color:white;">
-                <tr><th>Ant. Group</th><th>Near Unit</th><th>Radio Unit</th><th>Status</th><th>Device Type</th><th>Product Nr</th><th>REV</th><th>Serial</th></tr>
+                <tr><th>Ant. Group</th><th>Near Unit</th><th>Radio Unit</th><th>Status</th><th>Device Type</th><th>Product Nr</th></tr>
             </thead>
             <tbody>
             {% for r in ret_devices %}
             <tr>
                 <td>{{ r.antenna_group }}</td><td>{{ r.antenna_near_unit }}</td>
                 <td>{{ r.radio_unit|default:"—" }}</td><td>{{ r.status }}</td>
-                <td>{{ r.device_type }}</td><td>{{ r.product_nr|default:"—" }}</td><td class="text-muted small">{{ r.revision|default:"—" }}</td><td class="text-muted small font-monospace">{{ r.unique_id|default:"—" }}</td>
+                <td>{{ r.device_type }}</td><td>{{ r.product_nr|default:"—" }}</td>
             </tr>
-            {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">Nessun dispositivo RET</td></tr>{% endfor %}
+            {% empty %}<tr><td colspan="6" class="text-center text-muted py-3">Nessun dispositivo RET</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
@@ -238,16 +238,16 @@
         <div class="table-responsive">
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead class="table-success">
-                <tr><th>Ant. Group</th><th>Near Unit</th><th>Radio Unit</th><th>Status</th><th>Device Type</th><th>Product Nr</th><th>REV</th><th>Serial</th></tr>
+                <tr><th>Ant. Group</th><th>Near Unit</th><th>Radio Unit</th><th>Status</th><th>Device Type</th><th>Product Nr</th></tr>
             </thead>
             <tbody>
             {% for t in tma_devices %}
             <tr>
                 <td>{{ t.antenna_group }}</td><td>{{ t.antenna_near_unit }}</td>
                 <td>{{ t.radio_unit|default:"—" }}</td><td>{{ t.status }}</td>
-                <td>{{ t.device_type }}</td><td>{{ t.product_nr|default:"—" }}</td><td class="text-muted small">{{ t.revision|default:"—" }}</td><td class="text-muted small font-monospace">{{ t.unique_id|default:"—" }}</td>
+                <td>{{ t.device_type }}</td><td>{{ t.product_nr|default:"—" }}</td>
             </tr>
-            {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">Nessun dispositivo TMA</td></tr>{% endfor %}
+            {% empty %}<tr><td colspan="6" class="text-center text-muted py-3">Nessun dispositivo TMA</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>

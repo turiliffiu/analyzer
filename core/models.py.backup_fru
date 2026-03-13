@@ -119,16 +119,6 @@ class FRU(models.Model):
     
     name = models.CharField(max_length=50)  # BB-1, Radio-S100-1
     board = models.CharField(max_length=100)
-    lnh = models.CharField(max_length=20, blank=True)  # 000100, BXP_5
-    status = models.CharField(max_length=10, blank=True)  # 1
-    fault = models.CharField(max_length=10, blank=True)  # OFF/ON
-    oper = models.CharField(max_length=10, blank=True)  # ON/OFF
-    maint = models.CharField(max_length=10, blank=True)  # OFF/ON
-    stat = models.CharField(max_length=10, blank=True)  # ON/N/A
-    product_number = models.CharField(max_length=50, blank=True)  # KDU1370015/11
-    rev = models.CharField(max_length=20, blank=True)  # R3D, R2D
-    serial = models.CharField(max_length=50, blank=True)  # TD3X346968
-    date = models.CharField(max_length=20, blank=True)  # 20211017
     pmtemp = models.CharField(max_length=20, blank=True)
     temp = models.IntegerField(null=True, blank=True)  # None per BB-1
     upt = models.CharField(max_length=50, blank=True)

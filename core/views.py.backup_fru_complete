@@ -139,23 +139,11 @@ class UploadView(LoginRequiredMixin, TemplateView):
                 analysis=analysis,
                 name=item['name'],
                 board=item['board'],
-                lnh=item.get('lnh', ''),
-                status=item.get('status', ''),
-                fault=item.get('fault', ''),
-                oper=item.get('oper', ''),
-                maint=item.get('maint', ''),
-                stat=item.get('stat', ''),
-                product_number=item.get('product_number', ''),
-                rev=item.get('rev', ''),
-                serial=item.get('serial', ''),
-                date=item.get('date', ''),
                 pmtemp=item.get('pmtemp', ''),
                 temp=item.get('temp'),
-                upt=item.get('upt', ''),
-                volt=item.get('volt', ''),
-                sw=item.get('sw', ''),
                 is_temp_high=item.get('is_temp_high', False),
             )
+
         # --- 4. PUSCH/PUCCH ---
         pusch_parser = PuschParser(content)
         pusch_data = pusch_parser.parse()

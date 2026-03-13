@@ -168,43 +168,25 @@
         <div class="table-responsive">
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead class="table-warning">
-                <tr>
-                    <th>Nome</th><th>LNH</th><th>Board</th>
-                    <th>ST</th><th>Fault</th><th>Oper</th><th>Maint</th><th>Stat</th>
-                    <th>Product Nr</th><th>REV</th><th>Serial</th><th>Date</th>
-                    <th>PM Temp</th><th>Temp</th><th>UPT</th><th>Volt</th><th>SW</th>
-                </tr>
+                <tr><th>Nome</th><th>Board</th><th>PM Temp</th><th>Temperatura</th><th>Stato</th></tr>
             </thead>
             <tbody>
             {% for f in fru_units %}
             <tr class="{% if f.is_temp_high %}row-critical{% endif %}">
                 <td class="fw-semibold">{{ f.name }}</td>
-                <td class="text-muted small">{{ f.lnh|default:"—" }}</td>
                 <td class="text-muted">{{ f.board }}</td>
-                <td>{{ f.status|default:"—" }}</td>
-                <td class="small">{{ f.fault|default:"—" }}</td>
-                <td class="small">{{ f.oper|default:"—" }}</td>
-                <td class="small">{{ f.maint|default:"—" }}</td>
-                <td class="small">{{ f.stat|default:"—" }}</td>
-                <td class="small">{{ f.product_number|default:"—" }}</td>
-                <td class="text-muted small">{{ f.rev|default:"—" }}</td>
-                <td class="font-monospace small text-muted">{{ f.serial|default:"—" }}</td>
-                <td class="small text-muted">{{ f.date|default:"—" }}</td>
                 <td>{{ f.pmtemp|default:"—" }}</td>
-                <td class="{% if f.is_temp_high %}text-danger fw-bold{% endif %}">
-                    {% if f.temp is not None %}{{ f.temp }}°C{% else %}—{% endif %}
+                <td>{% if f.temp is not None %}{{ f.temp }} °C{% else %}—{% endif %}</td>
+                <td>{% if f.is_temp_high %}<span class="badge bg-danger">ALTA (>60°C)</span>
+                    {% else %}<span class="badge bg-success">OK</span>{% endif %}
                 </td>
-                <td class="text-end">{{ f.upt|default:"—" }}</td>
-                <td class="text-end">{{ f.volt|default:"—" }}</td>
-                <td class="small" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;">{{ f.sw|default:"—" }}</td>
             </tr>
-            {% empty %}
-            <tr><td colspan="17" class="text-center text-muted py-3">Nessun dato FRU</td></tr>
-            {% endfor %}
+            {% empty %}<tr><td colspan="5" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
     </div>
+
     <!-- TAB 4: PUSCH/PUCCH -->
     <div class="tab-pane fade" id="tab-pusch">
         <div class="table-responsive">

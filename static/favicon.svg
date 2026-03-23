@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Sfondo -->
+  <circle cx="50" cy="50" r="48" fill="#0066B3" stroke="#003D7A" stroke-width="2"/>
+  
+  <!-- Torre antenna -->
+  <rect x="45" y="35" width="10" height="35" fill="#fff" rx="1"/>
+  
+  <!-- Base antenna -->
+  <rect x="40" y="70" width="20" height="5" fill="#fff" rx="1"/>
+  
+  <!-- Onde segnale (sinistra) -->
+  <path d="M 30 50 Q 25 45, 20 50" stroke="#FFD700" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M 35 50 Q 32 47, 28 50" stroke="#FFD700" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- Onde segnale (destra) -->
+  <path d="M 70 50 Q 75 45, 80 50" stroke="#FFD700" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M 65 50 Q 68 47, 72 50" stroke="#FFD700" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- Punta antenna -->
+  <polygon points="50,30 47,35 53,35" fill="#FFD700"/>
+</svg>

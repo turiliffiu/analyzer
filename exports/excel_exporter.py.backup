@@ -235,39 +235,21 @@ class ExcelExporter:
 
     def _sheet_fiber(self):
         ws = self.wb.create_sheet("Fiber Links")
-        headers = ['Link ID', 'Status', 'RiL', 
-                   'WL1 (nm)', 'Temp1 (°C)', 'TXbs1 (%)', 'TX1 (dBm)', 'RX1 (dBm)',
-                   'WL2 (nm)', 'Temp2 (°C)', 'TXbs2 (%)', 'TX2 (dBm)', 'RX2 (dBm)',
-                   'DL Loss (dB)', 'UL Loss (dB)', 'Length', 
-                   'DL Critico', 'UL Critico', 'Link Down']
+        headers = ['Link', 'FRU', 'DL Loss (dB)', 'UL Loss (dB)',
+                   'DL Critico (>3.5dB)', 'UL Critico (>3.5dB)']
         self._header_style(ws, headers, COLOR_GREY)
-        
-        for idx, fiber in enumerate(self.analysis.fiber_links.all(), start=2):
-            ws.cell(row=idx, column=1, value=fiber.link_id or '')
-            ws.cell(row=idx, column=2, value=fiber.link_status or '')
-            ws.cell(row=idx, column=3, value=fiber.ril or '')
-            ws.cell(row=idx, column=4, value=float(fiber.wl1) if fiber.wl1 else '')
-            ws.cell(row=idx, column=5, value=fiber.temp1 if fiber.temp1 else '')
-            ws.cell(row=idx, column=6, value=fiber.txbs1 if fiber.txbs1 else '')
-            ws.cell(row=idx, column=7, value=float(fiber.txdbm1) if fiber.txdbm1 else '')
-            ws.cell(row=idx, column=8, value=float(fiber.rxdbm1) if fiber.rxdbm1 else '')
-            ws.cell(row=idx, column=9, value=float(fiber.wl2) if fiber.wl2 else '')
-            ws.cell(row=idx, column=10, value=fiber.temp2 if fiber.temp2 else '')
-            ws.cell(row=idx, column=11, value=fiber.txbs2 if fiber.txbs2 else '')
-            ws.cell(row=idx, column=12, value=float(fiber.txdbm2) if fiber.txdbm2 else '')
-            ws.cell(row=idx, column=13, value=float(fiber.rxdbm2) if fiber.rxdbm2 else '')
-            ws.cell(row=idx, column=14, value=float(fiber.dl_loss) if fiber.dl_loss else '')
-            ws.cell(row=idx, column=15, value=float(fiber.ul_loss) if fiber.ul_loss else '')
-            ws.cell(row=idx, column=16, value=fiber.length or '')
-            ws.cell(row=idx, column=17, value='Sì' if fiber.is_dl_critical else 'No')
-            ws.cell(row=idx, column=18, value='Sì' if fiber.is_ul_critical else 'No')
-            ws.cell(row=idx, column=19, value='Sì' if fiber.is_link_down else 'No')
-            
-            if fiber.is_dl_critical or fiber.is_ul_critical or fiber.is_link_down:
-                self._row_fill(ws, idx, BG_CRITICAL)
-        
-        self._autosize(ws)
 
+        for idx, fiber in enumerate(self.analysis.fiber_links.all(), start=2):
+            ws.cell(row=idx, column=1, value=fiber.link)
+            ws.cell(row=idx, column=2, value=fiber.fru)
+            ws.cell(row=idx, column=3, value=float(fiber.dl_loss) if fiber.dl_loss else '')
+            ws.cell(row=idx, column=4, value=float(fiber.ul_loss) if fiber.ul_loss else '')
+            ws.cell(row=idx, column=5, value='Sì' if fiber.is_dl_critical else 'No')
+            ws.cell(row=idx, column=6, value='Sì' if fiber.is_ul_critical else 'No')
+            if fiber.is_dl_critical or fiber.is_ul_critical:
+                self._row_fill(ws, idx, BG_CRITICAL)
+
+        self._autosize(ws)
 
     # ------------------------------------------------------------------ #
     #  8. SFP Modules                                                       #
@@ -275,38 +257,23 @@ class ExcelExporter:
 
     def _sheet_sfp(self):
         ws = self.wb.create_sheet("SFP Modules")
-        headers = ['Port', 'RiL', 'Board', 'LNH', 'Vendor', 'Device Name', 'REV', 
-                   'Serial', 'Date', 'Ericsson Product', 'WL (nm)', 'Temp (°C)', 
-                   'TXbs (%)', 'TX (dBm)', 'RX (dBm)', 'TN', 'RX Critical']
+        headers = ['Porta', 'FRU', 'Device Name', 'TX (dBm)', 'RX (dBm)',
+                   'Temperatura', 'TN Backhaul', 'RX Critico (<-25dBm)']
         self._header_style(ws, headers, COLOR_GOLD)
-        
+
         for idx, sfp in enumerate(self.analysis.sfp_modules.all(), start=2):
-            ws.cell(row=idx, column=1, value=sfp.port or '')
-            ws.cell(row=idx, column=2, value=sfp.ril or '')
-            ws.cell(row=idx, column=3, value=sfp.board or '')
-            ws.cell(row=idx, column=4, value=sfp.lnh or '')
-            ws.cell(row=idx, column=5, value=sfp.vendor or '')
-            ws.cell(row=idx, column=6, value=sfp.device_name or '')
-            ws.cell(row=idx, column=7, value=sfp.rev or '')
-            ws.cell(row=idx, column=8, value=sfp.serial or '')
-            ws.cell(row=idx, column=9, value=sfp.date or '')
-            ws.cell(row=idx, column=10, value=sfp.ericsson_product or '')
-            ws.cell(row=idx, column=11, value=float(sfp.wl) if sfp.wl else '')
-            ws.cell(row=idx, column=12, value=sfp.temperature if sfp.temperature else '')
-            ws.cell(row=idx, column=13, value=sfp.txbs if sfp.txbs else '')
-            ws.cell(row=idx, column=14, value=float(sfp.tx_dbm) if sfp.tx_dbm else '')
-            ws.cell(row=idx, column=15, value=float(sfp.rx_dbm) if sfp.rx_dbm else '')
-            ws.cell(row=idx, column=16, value='Sì' if sfp.is_tn_backhaul else 'No')
-            ws.cell(row=idx, column=17, value='Sì' if sfp.is_rx_critical else 'No')
-            
+            ws.cell(row=idx, column=1, value=sfp.port)
+            ws.cell(row=idx, column=2, value=sfp.fru)
+            ws.cell(row=idx, column=3, value=sfp.device_name)
+            ws.cell(row=idx, column=4, value=float(sfp.tx_dbm) if sfp.tx_dbm else '')
+            ws.cell(row=idx, column=5, value=float(sfp.rx_dbm) if sfp.rx_dbm else '')
+            ws.cell(row=idx, column=6, value=sfp.temperature if sfp.temperature else '')
+            ws.cell(row=idx, column=7, value='Sì' if sfp.is_tn_backhaul else 'No')
+            ws.cell(row=idx, column=8, value='Sì' if sfp.is_rx_critical else 'No')
             if sfp.is_rx_critical:
                 self._row_fill(ws, idx, BG_CRITICAL)
-            elif sfp.is_tn_backhaul:
-                self._row_fill(ws, idx, PatternFill(start_color="E3F2FD", end_color="E3F2FD", fill_type="solid"))
-        
+
         self._autosize(ws)
-
-
 
     # ------------------------------------------------------------------ #
     #  9. Branch Pairs                                                     #

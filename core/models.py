@@ -405,3 +405,42 @@ class TNBackhaul(models.Model):
     
     def __str__(self):
         return f"{self.board} {self.port} - {self.vendor}"
+
+
+class LgaAlarm(models.Model):
+    """Allarme da comando LGA (Alarm Log Ericsson)"""
+
+    SEVERITY_CHOICES = [
+        ('C', 'Critical'),
+        ('M', 'Major'),
+        ('m', 'minor'),
+        ('w', 'Warning'),
+        ('*', 'Ceasing'),
+    ]
+
+    analysis = models.ForeignKey(
+        Analysis, on_delete=models.CASCADE, related_name='lga_alarms'
+    )
+    timestamp = models.DateTimeField()
+    severity = models.CharField(max_length=1, choices=SEVERITY_CHOICES)
+    specific_problem = models.CharField(max_length=500)
+    managed_object = models.CharField(max_length=500, blank=True)
+    additional_info = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['timestamp']
+        verbose_name = "LGA Alarm"
+        verbose_name_plural = "LGA Alarms"
+
+    def __str__(self):
+        return f"{self.timestamp} [{self.get_severity_display()}] {self.specific_problem}"
+
+    @property
+    def severity_label(self):
+        """Etichetta leggibile della severità"""
+        return dict(self.SEVERITY_CHOICES).get(self.severity, self.severity)
+
+    @property
+    def is_active(self):
+        """True se l'allarme è attivo (non ceasing)"""
+        return self.severity != '*'

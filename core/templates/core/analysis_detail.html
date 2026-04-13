@@ -99,6 +99,9 @@
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-branch">
         <i class="bi bi-diagram-2 me-1"></i>Branch
         <span class="badge bg-secondary ms-1">{{ branch_pairs|length }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-lga">
+        <i class="bi bi-bell me-1"></i>LGA Alarms
+    </a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-tn">
         <i class="bi bi-hdd-network me-1"></i>TN Backhaul
         <span class="badge bg-secondary ms-1">{{ tn_backhaul|length }}</span></a></li>
@@ -443,6 +446,44 @@
             </tr>
             {% empty %}
             <tr><td colspan="10" class="text-center text-muted py-3">Nessun dato TN Backhaul</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    <!-- TAB 11: LGA Alarms -->
+    <div class="tab-pane fade" id="tab-lga">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead style="background:#1a3a5c;color:white;">
+                <tr>
+                    <th>Timestamp (UTC)</th>
+                    <th>Sev</th>
+                    <th>Severità</th>
+                    <th>Specific Problem</th>
+                    <th>Managed Object</th>
+                    <th>Additional Info</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for alarm in lga_alarms %}
+            <tr class="{% if alarm.severity == 'C' %}table-danger{% elif alarm.severity == 'M' %}table-warning{% elif alarm.severity == '*' %}table-secondary{% endif %}">
+                <td class="text-nowrap font-monospace">{{ alarm.timestamp|date:"Y-m-d H:i:s" }}</td>
+                <td>
+                    {% if alarm.severity == 'C' %}<span class="badge bg-danger">C</span>
+                    {% elif alarm.severity == 'M' %}<span class="badge bg-warning text-dark">M</span>
+                    {% elif alarm.severity == 'm' %}<span class="badge bg-info text-dark">m</span>
+                    {% elif alarm.severity == 'w' %}<span class="badge bg-secondary">w</span>
+                    {% elif alarm.severity == '*' %}<span class="badge bg-light text-dark border">*</span>
+                    {% endif %}
+                </td>
+                <td>{{ alarm.get_severity_display }}</td>
+                <td>{{ alarm.specific_problem }}</td>
+                <td class="font-monospace small">{{ alarm.managed_object }}</td>
+                <td class="text-muted">{{ alarm.additional_info }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-3">Nessun dato LGA</td></tr>
             {% endfor %}
             </tbody>
         </table>

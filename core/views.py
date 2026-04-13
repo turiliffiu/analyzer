@@ -12,6 +12,7 @@ from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView
 
 from .models import (
+    LgaAlarm,
     LogFile, Analysis, RadioUnit, Alarm, FRU, PuschData,
     RETDevice, TMADevice, FiberLink, SFPModule, BranchPair,
     TNBackhaul,
@@ -29,6 +30,7 @@ from parsers.fiber_parser import FiberParser
 from parsers.sfp_parser import SFPParser
 from parsers.branch_parser import BranchParser
 from parsers.tn_backhaul_parser import TNBackhaulParser
+from parsers.lga_parser import LgaParser
 
 
 class UploadView(LoginRequiredMixin, TemplateView):
@@ -276,6 +278,19 @@ class UploadView(LoginRequiredMixin, TemplateView):
                 is_rx_critical=item.get("is_rx_critical", False),
                 has_optical_data=item.get("has_optical_data", False),
             )
+        # --- 11. LGA Alarms ---
+        lga_parser = LgaParser(content)
+        lga_data = lga_parser.parse()
+        for item in lga_data:
+            LgaAlarm.objects.create(
+                analysis=analysis,
+                timestamp=item["timestamp"],
+                severity=item["severity"],
+                specific_problem=item["specific_problem"],
+                managed_object=item.get("managed_object", ""),
+                additional_info=item.get("additional_info", ""),
+            )
+
         # --- Aggiorna contatori statistici sull'Analysis ---
         analysis.radio_units_count = len(radio_data)
         analysis.alarms_critical_count = sum(1 for a in alarm_data if a['severity'] == 'CRITICAL')
@@ -355,6 +370,7 @@ class AnalysisDetailView(LoginRequiredMixin, DetailView):
         context['tn_backhaul'] = analysis.tn_backhaul.all()
         context['sfp_modules'] = analysis.sfp_modules.all()
         context['branch_pairs'] = analysis.branch_pairs.all()
+        context['lga_alarms'] = analysis.lga_alarms.all()
 
         return context
 

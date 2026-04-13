@@ -18,6 +18,7 @@ COLOR_TEAL   = "00B0F0"
 COLOR_GREY   = "595959"
 COLOR_GOLD   = "BF8F00"
 COLOR_DARK   = "243F60"
+COLOR_NAVY   = "1A3A5C"
 
 # Colori evidenziazione valori critici
 BG_CRITICAL  = "FFCCCC"  # rosso chiaro
@@ -44,6 +45,7 @@ class ExcelExporter:
         self._sheet_fiber()
         self._sheet_sfp()
         self._sheet_branch_pairs()
+        self._sheet_lga()
 
         excel_file = BytesIO()
         self.wb.save(excel_file)
@@ -302,7 +304,7 @@ class ExcelExporter:
             if sfp.is_rx_critical:
                 self._row_fill(ws, idx, BG_CRITICAL)
             elif sfp.is_tn_backhaul:
-                self._row_fill(ws, idx, PatternFill(start_color="E3F2FD", end_color="E3F2FD", fill_type="solid"))
+                self._row_fill(ws, idx, "E3F2FD")
         
         self._autosize(ws)
 
@@ -332,3 +334,47 @@ class ExcelExporter:
                 self._row_fill(ws, idx, BG_WARNING)
 
         self._autosize(ws)
+
+    # ------------------------------------------------------------------ #
+    #  10. LGA Alarms                                                      #
+    # ------------------------------------------------------------------ #
+    def _sheet_lga(self):
+        ws = self.wb.create_sheet("LGA Alarms")
+        headers = [
+            'Timestamp (UTC)', 'Severità', 'Codice Sev',
+            'Specific Problem', 'Managed Object', 'Additional Info',
+        ]
+        self._header_style(ws, headers, COLOR_NAVY)
+
+        # Mappa codice → etichetta leggibile
+        SEV_LABEL = {
+            'C': 'Critical',
+            'M': 'Major',
+            'm': 'minor',
+            'w': 'Warning',
+            '*': 'Ceasing',
+        }
+        # Colori riga per severità
+        SEV_COLOR = {
+            'C': BG_CRITICAL,   # rosso chiaro
+            'M': BG_WARNING,    # giallo chiaro
+        }
+
+        for idx, alarm in enumerate(self.analysis.lga_alarms.all(), start=2):
+            # Timestamp come stringa leggibile
+            ts_str = alarm.timestamp.strftime('%Y-%m-%d %H:%M:%S') if alarm.timestamp else ''
+            ws.cell(row=idx, column=1, value=ts_str)
+            ws.cell(row=idx, column=2, value=SEV_LABEL.get(alarm.severity, alarm.severity))
+            ws.cell(row=idx, column=3, value=alarm.severity)
+            ws.cell(row=idx, column=4, value=alarm.specific_problem)
+            ws.cell(row=idx, column=5, value=alarm.managed_object)
+            ws.cell(row=idx, column=6, value=alarm.additional_info)
+
+            # Evidenziazione per Critical e Major; grigio chiaro per Ceasing
+            if alarm.severity in SEV_COLOR:
+                self._row_fill(ws, idx, SEV_COLOR[alarm.severity])
+            elif alarm.severity == '*':
+                self._row_fill(ws, idx, "EFEFEF")
+
+        self._autosize(ws)
+

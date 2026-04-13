@@ -491,9 +491,10 @@ class LgaTrendView(LoginRequiredMixin, DetailView):
         qs = analysis.lga_alarms.all()
 
         # --- Filtro periodo da querystring ---
-        date_from = self.request.GET.get('date_from', '')
-        date_to   = self.request.GET.get('date_to', '')
-        preset    = self.request.GET.get('preset', '')
+        date_from     = self.request.GET.get('date_from', '')
+        date_to       = self.request.GET.get('date_to', '')
+        preset        = self.request.GET.get('preset', '')
+        filter_sev    = self.request.GET.get('severity', '')
 
         from django.utils import timezone as tz
         from datetime import timedelta
@@ -520,6 +521,14 @@ class LgaTrendView(LoginRequiredMixin, DetailView):
                 except ValueError:
                     pass
 
+        # --- Filtro severità (applicato DOPO il filtro periodo) ---
+        if filter_sev == 'raised':
+            qs_filtered = qs.exclude(severity='*')
+        elif filter_sev:
+            qs_filtered = qs.filter(severity=filter_sev)
+        else:
+            qs_filtered = qs
+
         # --- Cards sinottiche ---
         from django.db.models import Count
         total   = qs.count()
@@ -528,6 +537,9 @@ class LgaTrendView(LoginRequiredMixin, DetailView):
         by_sev  = {s: 0 for s in ['C', 'M', 'm', 'w', '*']}
         for row in qs.values('severity').annotate(n=Count('id')):
             by_sev[row['severity']] = row['n']
+
+        # Usa qs_filtered per tabella e timeline
+        qs = qs_filtered
 
         # --- Tabella per tipo allarme ---
         from collections import defaultdict
@@ -586,5 +598,6 @@ class LgaTrendView(LoginRequiredMixin, DetailView):
             'timeline_minor':    json.dumps([v['m'] for v in timeline.values()]),
             'timeline_warning':  json.dumps([v['w'] for v in timeline.values()]),
             'timeline_ceasing':  json.dumps([v['*'] for v in timeline.values()]),
+            'filter_sev':        filter_sev,
         })
         return context

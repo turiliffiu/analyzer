@@ -53,8 +53,8 @@ class BaseParser:
         }
 
         for line in self.lines[:100]:
-            # Nome apparato da comando amos
-            amos_match = re.search(r'amos\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+            # Nome apparato da MeContext (più affidabile del comando amos)
+            amos_match = re.search(r'MeContext=([A-Z0-9_-]+)', line)
             if amos_match and not metadata['apparato_nome']:
                 metadata['apparato_nome'] = amos_match.group(1)
 

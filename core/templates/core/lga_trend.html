@@ -1,0 +1,202 @@
+{% extends 'core/base.html' %}
+{% block title %}LGA Trend — {{ analysis.log_file.apparato_nome }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3">
+
+  <!-- Intestazione -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h4 class="mb-0"><i class="bi bi-graph-up me-2 text-primary"></i>LGA Trend Analysis</h4>
+      <small class="text-muted">Apparato: <strong>{{ analysis.log_file.apparato_nome }}</strong></small>
+    </div>
+    <a href="{% url 'core:analysis_detail' analysis.pk %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Torna all'analisi
+    </a>
+  </div>
+
+  <!-- Filtri periodo -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-auto">
+          <label class="form-label small mb-1">Da</label>
+          <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-auto">
+          <label class="form-label small mb-1">A</label>
+          <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-funnel me-1"></i>Filtra
+          </button>
+        </div>
+        <div class="col-auto ms-2">
+          <a href="?preset=24h" class="btn btn-sm {% if preset == '24h' %}btn-warning{% else %}btn-outline-warning{% endif %}">Ultime 24h</a>
+          <a href="?preset=7d"  class="btn btn-sm {% if preset == '7d' %}btn-info{% else %}btn-outline-info{% endif %}">7 giorni</a>
+          <a href="?preset=30d" class="btn btn-sm {% if preset == '30d' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">30 giorni</a>
+          <a href="?" class="btn btn-sm btn-outline-dark">Tutto</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Cards sinottiche -->
+  <div class="row g-2 mb-3">
+    <div class="col">
+      <div class="card text-center border-0 shadow-sm">
+        <div class="card-body py-2">
+          <div class="fs-4 fw-bold">{{ total }}</div>
+          <small class="text-muted">Totale eventi</small>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card text-center border-0 shadow-sm bg-light">
+        <div class="card-body py-2">
+          <div class="fs-4 fw-bold text-danger">{{ raised }}</div>
+          <small class="text-muted">Raised</small>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card text-center border-0 shadow-sm bg-light">
+        <div class="card-body py-2">
+          <div class="fs-4 fw-bold text-secondary">{{ ceased }}</div>
+          <small class="text-muted">Ceased</small>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card text-center border-0 shadow-sm {% if by_sev.C > 0 %}bg-danger text-white{% endif %}">
+        <div class="card-body py-2">
+          <div class="fs-4 fw-bold">{{ by_sev.C }}</div>
+          <small>Critical</small>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card text-center border-0 shadow-sm {% if by_sev.M > 0 %}bg-warning{% endif %}">
+        <div class="card-body py-2">
+          <div class="fs-4 fw-bold">{{ by_sev.M }}</div>
+          <small>Major</small>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card text-center border-0 shadow-sm">
+        <div class="card-body py-2">
+          <div class="fs-4 fw-bold text-info">{{ by_sev.m }}</div>
+          <small class="text-muted">minor</small>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card text-center border-0 shadow-sm">
+        <div class="card-body py-2">
+          <div class="fs-4 fw-bold text-secondary">{{ by_sev.w }}</div>
+          <small class="text-muted">Warning</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grafico timeline -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-header py-2 fw-bold" style="background:#1a3a5c;color:white;">
+      <i class="bi bi-bar-chart-line me-2"></i>Timeline eventi per ora
+    </div>
+    <div class="card-body">
+      <canvas id="timelineChart" height="80"></canvas>
+    </div>
+  </div>
+
+  <!-- Tabella riepilogo per tipo allarme -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-header py-2 fw-bold" style="background:#1a3a5c;color:white;">
+      <i class="bi bi-table me-2"></i>Riepilogo per tipo allarme
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+          <thead class="table-dark">
+            <tr>
+              <th>Specific Problem</th>
+              <th class="text-center">Raised</th>
+              <th class="text-center">Ceased</th>
+              <th class="text-center">Net attivi</th>
+              <th class="text-center">Stato</th>
+              <th>Prima occorrenza</th>
+              <th>Ultima occorrenza</th>
+              <th>Managed Objects</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for row in alarm_summary %}
+          <tr class="{% if row.status == 'ATTIVO' and row.net > 0 %}table-warning{% elif row.status == 'RISOLTO' %}table-success{% endif %}">
+            <td class="fw-semibold">{{ row.specific_problem }}</td>
+            <td class="text-center">{{ row.raised }}</td>
+            <td class="text-center text-muted">{{ row.ceased }}</td>
+            <td class="text-center">
+              {% if row.net > 0 %}
+                <span class="badge bg-danger">{{ row.net }}</span>
+              {% else %}
+                <span class="badge bg-success">0</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if row.status == 'ATTIVO' %}
+                <span class="badge bg-danger">ATTIVO</span>
+              {% else %}
+                <span class="badge bg-success">RISOLTO</span>
+              {% endif %}
+            </td>
+            <td class="font-monospace small">{{ row.first|date:"Y-m-d H:i" }}</td>
+            <td class="font-monospace small">{{ row.last|date:"Y-m-d H:i" }}</td>
+            <td class="text-muted small">{{ row.managed_objects }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="text-center py-3 text-muted">Nessun dato nel periodo selezionato</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const labels   = {{ timeline_labels|safe }};
+const critical = {{ timeline_critical|safe }};
+const major    = {{ timeline_major|safe }};
+const minor    = {{ timeline_minor|safe }};
+const warning  = {{ timeline_warning|safe }};
+const ceasing  = {{ timeline_ceasing|safe }};
+
+new Chart(document.getElementById('timelineChart'), {
+  type: 'bar',
+  data: {
+    labels: labels,
+    datasets: [
+      { label: 'Critical', data: critical, backgroundColor: '#dc3545' },
+      { label: 'Major',    data: major,    backgroundColor: '#ffc107' },
+      { label: 'minor',    data: minor,    backgroundColor: '#0dcaf0' },
+      { label: 'Warning',  data: warning,  backgroundColor: '#6c757d' },
+      { label: 'Ceasing',  data: ceasing,  backgroundColor: '#adb5bd', borderDash: [4,2] },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { stacked: true, ticks: { maxRotation: 45, font: { size: 10 } } },
+      y: { stacked: true, beginAtZero: true }
+    }
+  }
+});
+</script>
+{% endblock %}

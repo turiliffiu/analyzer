@@ -452,7 +452,13 @@
         </div>
     </div>
     <!-- TAB 11: LGA Alarms -->
+    <!-- Link Trend Analysis -->
     <div class="tab-pane fade" id="tab-lga">
+        <div class="d-flex justify-content-end mb-2 mt-1 px-1">
+            <a href="{% url 'core:lga_trend' analysis.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-graph-up me-1"></i>Trend Analysis
+            </a>
+        </div>
         <div class="table-responsive">
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead style="background:#1a3a5c;color:white;">

@@ -471,3 +471,120 @@ class DeleteAllAnalysesView(View):
             messages.error(request, f'❌ Errore durante eliminazione: {str(e)}')
         
         return redirect('core:dashboard')
+
+
+class LgaTrendView(LoginRequiredMixin, DetailView):
+    """Dashboard trend analysis degli allarmi LGA"""
+    model = Analysis
+    template_name = 'core/lga_trend.html'
+    context_object_name = 'analysis'
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser or (hasattr(user, 'profile') and user.profile.is_admin()):
+            return Analysis.objects.all()
+        return Analysis.objects.filter(user=user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        analysis = self.object
+        qs = analysis.lga_alarms.all()
+
+        # --- Filtro periodo da querystring ---
+        date_from = self.request.GET.get('date_from', '')
+        date_to   = self.request.GET.get('date_to', '')
+        preset    = self.request.GET.get('preset', '')
+
+        from django.utils import timezone as tz
+        from datetime import timedelta
+
+        if preset == '24h':
+            qs = qs.filter(timestamp__gte=tz.now() - timedelta(hours=24))
+        elif preset == '7d':
+            qs = qs.filter(timestamp__gte=tz.now() - timedelta(days=7))
+        elif preset == '30d':
+            qs = qs.filter(timestamp__gte=tz.now() - timedelta(days=30))
+        else:
+            if date_from:
+                try:
+                    from datetime import datetime
+                    df = datetime.strptime(date_from, '%Y-%m-%d')
+                    qs = qs.filter(timestamp__date__gte=df.date())
+                except ValueError:
+                    pass
+            if date_to:
+                try:
+                    from datetime import datetime
+                    dt = datetime.strptime(date_to, '%Y-%m-%d')
+                    qs = qs.filter(timestamp__date__lte=dt.date())
+                except ValueError:
+                    pass
+
+        # --- Cards sinottiche ---
+        from django.db.models import Count
+        total   = qs.count()
+        raised  = qs.exclude(severity='*').count()
+        ceased  = qs.filter(severity='*').count()
+        by_sev  = {s: 0 for s in ['C', 'M', 'm', 'w', '*']}
+        for row in qs.values('severity').annotate(n=Count('id')):
+            by_sev[row['severity']] = row['n']
+
+        # --- Tabella per tipo allarme ---
+        from collections import defaultdict
+        alarm_groups = defaultdict(lambda: {
+            'raised': 0, 'ceased': 0, 'first': None, 'last': None, 'managed_objects': set()
+        })
+        for alarm in qs.order_by('timestamp'):
+            sp = alarm.specific_problem or '(sconosciuto)'
+            g  = alarm_groups[sp]
+            if alarm.severity == '*':
+                g['ceased'] += 1
+            else:
+                g['raised'] += 1
+            if g['first'] is None:
+                g['first'] = alarm.timestamp
+            g['last'] = alarm.timestamp
+            if alarm.managed_object:
+                g['managed_objects'].add(alarm.managed_object)
+
+        alarm_summary = []
+        for sp, g in sorted(alarm_groups.items(), key=lambda x: -x[1]['raised']):
+            net = g['raised'] - g['ceased']
+            alarm_summary.append({
+                'specific_problem': sp,
+                'raised':  g['raised'],
+                'ceased':  g['ceased'],
+                'net':     net,
+                'status':  'ATTIVO' if net > 0 else 'RISOLTO',
+                'first':   g['first'],
+                'last':    g['last'],
+                'managed_objects': ', '.join(sorted(g['managed_objects']))[:120],
+            })
+
+        # --- Dati timeline per Chart.js (raggruppati per ora) ---
+        from collections import OrderedDict
+        timeline = OrderedDict()
+        for alarm in qs.order_by('timestamp'):
+            hour_key = alarm.timestamp.strftime('%Y-%m-%d %H:00')
+            if hour_key not in timeline:
+                timeline[hour_key] = {'C': 0, 'M': 0, 'm': 0, 'w': 0, '*': 0}
+            timeline[hour_key][alarm.severity] = timeline[hour_key].get(alarm.severity, 0) + 1
+
+        import json
+        context.update({
+            'date_from':     date_from,
+            'date_to':       date_to,
+            'preset':        preset,
+            'total':         total,
+            'raised':        raised,
+            'ceased':        ceased,
+            'by_sev':        by_sev,
+            'alarm_summary': alarm_summary,
+            'timeline_labels': json.dumps(list(timeline.keys())),
+            'timeline_critical': json.dumps([v['C'] for v in timeline.values()]),
+            'timeline_major':    json.dumps([v['M'] for v in timeline.values()]),
+            'timeline_minor':    json.dumps([v['m'] for v in timeline.values()]),
+            'timeline_warning':  json.dumps([v['w'] for v in timeline.values()]),
+            'timeline_ceasing':  json.dumps([v['*'] for v in timeline.values()]),
+        })
+        return context

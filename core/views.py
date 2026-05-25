@@ -13,6 +13,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 
 from .models import (
     LgaAlarm,
+    AlarmPort,
     LogFile, Analysis, RadioUnit, Alarm, FRU, PuschData,
     RETDevice, TMADevice, FiberLink, SFPModule, BranchPair,
     TNBackhaul,
@@ -31,6 +32,7 @@ from parsers.sfp_parser import SFPParser
 from parsers.branch_parser import BranchParser
 from parsers.tn_backhaul_parser import TNBackhaulParser
 from parsers.lga_parser import LgaParser
+from parsers.alarm_port_parser import AlarmPortParser
 
 
 class UploadView(LoginRequiredMixin, TemplateView):
@@ -291,6 +293,21 @@ class UploadView(LoginRequiredMixin, TemplateView):
                 additional_info=item.get("additional_info", ""),
             )
 
+        # --- 12. Alarm Ports ---
+        alarm_port_parser = AlarmPortParser(content)
+        alarm_port_data = alarm_port_parser.parse()
+        for item in alarm_port_data:
+            AlarmPort.objects.create(
+                analysis=analysis,
+                fru=item['fru'],
+                alarm_port=item['alarm_port'],
+                active_external_alarm=item['active_external_alarm'],
+                administrative_state_code=item['administrative_state_code'],
+                administrative_state_label=item['administrative_state_label'],
+                alarm_slogan=item['alarm_slogan'],
+                normally_open=item['normally_open'],
+            )
+
         # --- Aggiorna contatori statistici sull'Analysis ---
         analysis.radio_units_count = len(radio_data)
         analysis.alarms_critical_count = sum(1 for a in alarm_data if a['severity'] == 'CRITICAL')
@@ -371,6 +388,7 @@ class AnalysisDetailView(LoginRequiredMixin, DetailView):
         context['sfp_modules'] = analysis.sfp_modules.all()
         context['branch_pairs'] = analysis.branch_pairs.all()
         context['lga_alarms'] = analysis.lga_alarms.all()
+        context['alarm_ports'] = analysis.alarm_ports.all()
 
         return context
 

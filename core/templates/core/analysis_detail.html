@@ -99,6 +99,9 @@
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-branch">
         <i class="bi bi-diagram-2 me-1"></i>Branch
         <span class="badge bg-secondary ms-1">{{ branch_pairs|length }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-alarmport">
+        <i class="bi bi-plug me-1"></i>Alarm Ports
+    </a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-lga">
         <i class="bi bi-bell me-1"></i>LGA Alarms
     </a></li>
@@ -446,6 +449,41 @@
             </tr>
             {% empty %}
             <tr><td colspan="10" class="text-center text-muted py-3">Nessun dato TN Backhaul</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    <!-- TAB 12: Alarm Ports -->
+    <div class="tab-pane fade" id="tab-alarmport">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead style="background:#5a3e00;color:white;">
+                <tr>
+                    <th>FRU</th>
+                    <th>Alarm Port</th>
+                    <th>Slogan</th>
+                    <th class="text-center">Normally Open</th>
+                    <th class="text-center">Active Alarm</th>
+                    <th>Admin State</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for ap in alarm_ports %}
+            <tr class="{% if ap.active_external_alarm %}table-danger{% endif %}">
+                <td>{{ ap.fru }}</td>
+                <td class="font-monospace">{{ ap.alarm_port }}</td>
+                <td class="fw-semibold">{{ ap.alarm_slogan }}</td>
+                <td class="text-center font-monospace">
+                    {% if ap.normally_open %}true{% else %}false{% endif %}
+                </td>
+                <td class="text-center font-monospace">
+                    {% if ap.active_external_alarm %}true{% else %}false{% endif %}
+                </td>
+                <td>{{ ap.administrative_state_code }} ({{ ap.administrative_state_label }})</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-3">Nessun dato Alarm Ports</td></tr>
             {% endfor %}
             </tbody>
         </table>

@@ -444,3 +444,27 @@ class LgaAlarm(models.Model):
     def is_active(self):
         """True se l'allarme è attivo (non ceasing)"""
         return self.severity != '*'
+
+
+class AlarmPort(models.Model):
+    """Porta di allarme esterno (hget AlarmPort=)"""
+
+    analysis = models.ForeignKey(
+        Analysis, on_delete=models.CASCADE, related_name='alarm_ports'
+    )
+
+    fru = models.CharField(max_length=50)           # BB-1
+    alarm_port = models.IntegerField()              # 2, 3, 4, 7
+    active_external_alarm = models.BooleanField(default=False)
+    administrative_state_code = models.CharField(max_length=5, blank=True)   # 1
+    administrative_state_label = models.CharField(max_length=50, blank=True) # UNLOCKED
+    alarm_slogan = models.CharField(max_length=200, blank=True)  # ALLARME PORTA
+    normally_open = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['fru', 'alarm_port']
+        verbose_name = "Alarm Port"
+        verbose_name_plural = "Alarm Ports"
+
+    def __str__(self):
+        return f"{self.fru} AlarmPort={self.alarm_port} — {self.alarm_slogan}"

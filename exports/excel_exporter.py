@@ -46,6 +46,7 @@ class ExcelExporter:
         self._sheet_sfp()
         self._sheet_branch_pairs()
         self._sheet_lga()
+        self._sheet_alarm_ports()
 
         excel_file = BytesIO()
         self.wb.save(excel_file)
@@ -375,6 +376,32 @@ class ExcelExporter:
                 self._row_fill(ws, idx, SEV_COLOR[alarm.severity])
             elif alarm.severity == '*':
                 self._row_fill(ws, idx, "EFEFEF")
+
+        self._autosize(ws)
+
+    # ------------------------------------------------------------------ #
+    #  11. Alarm Ports                                                     #
+    # ------------------------------------------------------------------ #
+    def _sheet_alarm_ports(self):
+        ws = self.wb.create_sheet("Alarm Ports")
+        headers = [
+            'FRU', 'Alarm Port', 'Alarm Slogan',
+            'Normally Open', 'Active External Alarm',
+            'Admin State Code', 'Admin State Label',
+        ]
+        self._header_style(ws, headers, "5a3e00")
+
+        for idx, ap in enumerate(self.analysis.alarm_ports.all(), start=2):
+            ws.cell(row=idx, column=1, value=ap.fru)
+            ws.cell(row=idx, column=2, value=ap.alarm_port)
+            ws.cell(row=idx, column=3, value=ap.alarm_slogan)
+            ws.cell(row=idx, column=4, value='true' if ap.normally_open else 'false')
+            ws.cell(row=idx, column=5, value='true' if ap.active_external_alarm else 'false')
+            ws.cell(row=idx, column=6, value=ap.administrative_state_code)
+            ws.cell(row=idx, column=7, value=ap.administrative_state_label)
+
+            if ap.active_external_alarm:
+                self._row_fill(ws, idx, BG_CRITICAL)
 
         self._autosize(ws)
 

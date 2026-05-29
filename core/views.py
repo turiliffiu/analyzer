@@ -122,6 +122,7 @@ class UploadView(LoginRequiredMixin, TemplateView):
                 rx=item.get('rx'),
                 is_vswr_warning=item.get('is_vswr_warning') or False,
                 is_vswr_critical=item.get('is_vswr_critical') or False,
+                cell_id=item.get('cell_id', ''),
             )
 
         # --- 2. Allarmi ---

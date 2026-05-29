@@ -15,20 +15,20 @@ class RadioParser:
                 continue
             if in_radio and '-----' in line:
                 break
-            if in_radio and 'Radio-' in line:
+            if in_radio and ('Radio-' in line or 'AAS-' in line):
                 parsed = self._parse_radio_line(line)
                 if parsed:
                     data.append(parsed)
         return data
     
     def _parse_radio_line(self, line):
-        fru_match = re.search(r'(Radio-S\d+-\d+)', line)
+        fru_match = re.search(r'((?:Radio|AAS)-S\d+-\d+)', line)
         if not fru_match:
             return None
         fru = fru_match.group(1)
-        board_match = re.search(r'(RRU[A-Z0-9]+\*?)', line)
+        board_match = re.search(r'((?:RRU|AIR)[A-Z0-9]+\*?)', line)
         board = board_match.group(1) if board_match else '-'
-        rf_match = re.search(r'RRU[A-Z0-9]+\*?\s+([A-D])\s+', line)
+        rf_match = re.search(r'(?:RRU|AIR)[A-Z0-9]+\*?\s+([A-D])\s+', line)
         rf_port = rf_match.group(1) if rf_match else '-'
         bp_match = re.search(r'\s+([0-9][A-D])\s+', line)
         branch_pair = bp_match.group(1) if bp_match else '-'
@@ -50,8 +50,16 @@ class RadioParser:
                     pass
         
         tx, tx_unit, vswr, return_loss = None, None, None, None
+
+        # Se VSWR è esplicitamente '-' nella riga, non parsare VSWR
+        vswr_dash = bool(re.search(r'\(\d+\.\d+\)\s+-\s+', line))
         
-        if len(pairs) == 1:
+        if vswr_dash:
+            # AAS antenna: VSWR non disponibile, coppia e' TX (W/dBm)
+            if pairs:
+                tx = pairs[0]['first']  # es. 48.5 W
+                tx_unit = 'W'
+        elif len(pairs) == 1:
             vswr = pairs[0]['first']
             return_loss = pairs[0]['second']
             tx_before = [s for s in standalones if s['index'] < pairs[0]['index']]
@@ -64,11 +72,16 @@ class RadioParser:
             vswr = pairs[1]['first']
             return_loss = pairs[1]['second']
         
-        rx_match = re.search(r'(-[\d.]+)\s+[\d/-]+\s*$', after_rf)
+        rx_match = re.search(r'(-[\d.]+)\s+[\d/-]+\s*', after_rf)
         rx = float(rx_match.group(1)) if rx_match else None
+
+        # Estrai cell_id da FDD=XXXXX
+        cell_match = re.search(r'(?:FDD|NRC)=([A-Z0-9]+)', line)
+        cell_id = cell_match.group(1) if cell_match else ''
         
         return {
             'fru': fru, 'board': board, 'rf_port': rf_port, 'branch_pair': branch_pair,
             'tx': tx, 'tx_unit': tx_unit, 'vswr': vswr, 'return_loss': return_loss, 'rx': rx,
-            'is_vswr_warning': vswr and vswr > 1.25, 'is_vswr_critical': vswr and vswr > 1.50
+            'is_vswr_warning': vswr and vswr > 1.25, 'is_vswr_critical': vswr and vswr > 1.50,
+            'cell_id': cell_id
         }

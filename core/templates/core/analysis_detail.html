@@ -119,7 +119,7 @@
             <thead class="table-primary">
                 <tr>
                     <th>FRU</th><th>Board</th><th>RF</th><th>BP</th>
-                    <th>TX</th><th>VSWR</th><th>Ret. Loss</th><th>RX (dBm)</th><th>Stato</th>
+                    <th>TX</th><th>VSWR</th><th>Ret. Loss</th><th>RX (dBm)</th><th>Cell ID</th><th>Stato</th>
                 </tr>
             </thead>
             <tbody>
@@ -133,13 +133,14 @@
                 <td class="fw-bold {% if u.is_vswr_critical %}text-danger{% elif u.is_vswr_warning %}text-warning{% endif %}">{{ u.vswr }}</td>
                 <td>{% if u.return_loss %}{{ u.return_loss }} dB{% else %}—{% endif %}</td>
                 <td>{% if u.rx %}{{ u.rx }}{% else %}—{% endif %}</td>
+                <td class="font-monospace small">{{ u.cell_id }}</td>
                 <td>
                     {% if u.is_vswr_critical %}<span class="badge bg-danger">CRITICAL</span>
                     {% elif u.is_vswr_warning %}<span class="badge bg-warning text-dark">WARNING</span>
                     {% else %}<span class="badge bg-success">OK</span>{% endif %}
                 </td>
             </tr>
-            {% empty %}<tr><td colspan="9" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
+            {% empty %}<tr><td colspan="10" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>

@@ -90,7 +90,7 @@ class ExcelExporter:
     def _sheet_radio_units(self):
         ws = self.wb.create_sheet("Radio Units VSWR")
         headers = ['FRU', 'Board', 'RF Port', 'Branch Pair', 'TX', 'TX Unit',
-                   'VSWR', 'Return Loss (dB)', 'RX (dBm)', 'VSWR Warning', 'VSWR Critical']
+                   'VSWR', 'Return Loss (dB)', 'RX (dBm)', 'Cell ID', 'VSWR Warning', 'VSWR Critical']
         self._header_style(ws, headers, COLOR_BLUE)
 
         for idx, unit in enumerate(self.analysis.radio_units.all(), start=2):
@@ -98,9 +98,10 @@ class ExcelExporter:
                 unit.fru, unit.board, unit.rf_port, unit.branch_pair,
                 float(unit.tx) if unit.tx else '',
                 unit.tx_unit,
-                float(unit.vswr),
+                float(unit.vswr) if unit.vswr else '',
                 float(unit.return_loss) if unit.return_loss else '',
                 float(unit.rx) if unit.rx else '',
+                unit.cell_id or '',
                 'Sì' if unit.is_vswr_warning else 'No',
                 'Sì' if unit.is_vswr_critical else 'No',
             ]

@@ -75,6 +75,8 @@ class RadioUnit(models.Model):
     return_loss = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     rx = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     
+    cell_id = models.CharField(max_length=50, blank=True)  # AGE1T1, AGE1T2
+
     # Flags
     is_vswr_warning = models.BooleanField(default=False)  # > 1.25
     is_vswr_critical = models.BooleanField(default=False)  # > 1.50

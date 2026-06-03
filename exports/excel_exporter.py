@@ -102,12 +102,13 @@ class ExcelExporter:
 
     def _sheet_radio_units(self):
         ws = self.wb.create_sheet("Radio Units VSWR")
-        headers = ['FRU', 'Board', 'RF Port', 'Branch Pair', 'TX', 'TX Unit',
+        headers = ['Apparato', 'FRU', 'Board', 'RF Port', 'Branch Pair', 'TX', 'TX Unit',
                    'VSWR', 'Return Loss (dB)', 'RX (dBm)', 'Cell ID', 'VSWR Warning', 'VSWR Critical']
         self._header_style(ws, headers, COLOR_BLUE)
 
         for idx, unit in enumerate(self.analysis.radio_units.all(), start=2):
             row = [
+                unit.apparato or '',
                 unit.fru, unit.board, unit.rf_port, unit.branch_pair,
                 float(unit.tx) if unit.tx else '',
                 unit.tx_unit,
@@ -135,7 +136,7 @@ class ExcelExporter:
 
     def _sheet_allarmi(self):
         ws = self.wb.create_sheet("Allarmi")
-        headers = ['Severity', 'Alarm Number', 'Causa']
+        headers = ['Apparato', 'Severity', 'Alarm Number', 'Causa']
         self._header_style(ws, headers, COLOR_RED)
 
         SEVERITY_COLORS = {
@@ -145,9 +146,10 @@ class ExcelExporter:
         }
 
         for idx, alarm in enumerate(self.analysis.alarms.all(), start=2):
-            ws.cell(row=idx, column=1, value=alarm.severity)
-            ws.cell(row=idx, column=2, value=alarm.alarm_number)
-            ws.cell(row=idx, column=3, value=alarm.cause)
+            ws.cell(row=idx, column=1, value=alarm.apparato or '')
+            ws.cell(row=idx, column=3, value=alarm.severity)
+            ws.cell(row=idx, column=4, value=alarm.alarm_number)
+            ws.cell(row=idx, column=5, value=alarm.cause)
             color = SEVERITY_COLORS.get(alarm.severity, '')
             if color:
                 self._row_fill(ws, idx, color)
@@ -160,13 +162,14 @@ class ExcelExporter:
 
     def _sheet_fru(self):
         ws = self.wb.create_sheet("FRU")
-        headers = ['Nome', 'Board', 'PM Temp', 'Temperatura (°C)', 'Temp Elevata (>60°C)']
+        headers = ['Apparato', 'Nome', 'Board', 'PM Temp', 'Temperatura (°C)', 'Temp Elevata (>60°C)']
         self._header_style(ws, headers, COLOR_ORANGE)
 
         for idx, fru in enumerate(self.analysis.fru_units.all(), start=2):
-            ws.cell(row=idx, column=1, value=fru.name)
-            ws.cell(row=idx, column=2, value=fru.board)
-            ws.cell(row=idx, column=3, value=fru.pmtemp)
+            ws.cell(row=idx, column=1, value=fru.apparato or '')
+            ws.cell(row=idx, column=2, value=fru.name)
+            ws.cell(row=idx, column=3, value=fru.board)
+            ws.cell(row=idx, column=4, value=fru.pmtemp)
             ws.cell(row=idx, column=4, value=fru.temp if fru.temp is not None else 'N/A')
             ws.cell(row=idx, column=5, value='Sì' if fru.is_temp_high else 'No')
             if fru.is_temp_high:
@@ -180,12 +183,13 @@ class ExcelExporter:
 
     def _sheet_pusch(self):
         ws = self.wb.create_sheet("PUSCH PUCCH RSSI")
-        headers = ['Cell', 'SC', 'FRU', 'Board', 'PUSCH', 'PUCCH',
+        headers = ['Apparato', 'Cell', 'SC', 'FRU', 'Board', 'PUSCH', 'PUCCH',
                    'Port A', 'Port B', 'Port C', 'Port D', 'Delta', 'RSSI Alto']
         self._header_style(ws, headers, COLOR_PURPLE)
 
         for idx, row_data in enumerate(self.analysis.pusch_data.all(), start=2):
             row = [
+                row_data.apparato or '',
                 row_data.cell, row_data.sc, row_data.fru, row_data.board,
                 float(row_data.pusch), float(row_data.pucch),
                 float(row_data.port_a) if row_data.port_a else '',
@@ -208,12 +212,13 @@ class ExcelExporter:
 
     def _sheet_ret(self):
         ws = self.wb.create_sheet("RET Devices")
-        headers = ['Antenna Group', 'Antenna Near Unit', 'Radio Unit',
+        headers = ['Apparato', 'Antenna Group', 'Antenna Near Unit', 'Radio Unit',
                    'Status', 'Device Type', 'Product Nr', 'Revision', 'Unique ID']
         self._header_style(ws, headers, COLOR_TEAL)
 
         for idx, ret in enumerate(self.analysis.ret_devices.all(), start=2):
-            ws.cell(row=idx, column=1, value=ret.antenna_group)
+            ws.cell(row=idx, column=1, value=ret.apparato or '')
+            ws.cell(row=idx, column=2, value=ret.antenna_group)
             ws.cell(row=idx, column=2, value=ret.antenna_near_unit)
             ws.cell(row=idx, column=3, value=ret.radio_unit)
             ws.cell(row=idx, column=4, value=ret.status)
@@ -230,12 +235,13 @@ class ExcelExporter:
 
     def _sheet_tma(self):
         ws = self.wb.create_sheet("TMA Devices")
-        headers = ['Antenna Group', 'Antenna Near Unit', 'Radio Unit',
+        headers = ['Apparato', 'Antenna Group', 'Antenna Near Unit', 'Radio Unit',
                    'Status', 'Device Type', 'Product Nr', 'Revision', 'Unique ID']
         self._header_style(ws, headers, COLOR_GREEN)
 
         for idx, tma in enumerate(self.analysis.tma_devices.all(), start=2):
-            ws.cell(row=idx, column=1, value=tma.antenna_group)
+            ws.cell(row=idx, column=1, value=tma.apparato or '')
+            ws.cell(row=idx, column=2, value=tma.antenna_group)
             ws.cell(row=idx, column=2, value=tma.antenna_near_unit)
             ws.cell(row=idx, column=3, value=tma.radio_unit)
             ws.cell(row=idx, column=4, value=tma.status)
@@ -252,7 +258,7 @@ class ExcelExporter:
 
     def _sheet_fiber(self):
         ws = self.wb.create_sheet("Fiber Links")
-        headers = ['Link ID', 'Status', 'RiL', 
+        headers = ['Apparato', 'Link ID', 'Status', 'RiL', 
                    'WL1 (nm)', 'Temp1 (°C)', 'TXbs1 (%)', 'TX1 (dBm)', 'RX1 (dBm)',
                    'WL2 (nm)', 'Temp2 (°C)', 'TXbs2 (%)', 'TX2 (dBm)', 'RX2 (dBm)',
                    'DL Loss (dB)', 'UL Loss (dB)', 'Length', 
@@ -260,7 +266,8 @@ class ExcelExporter:
         self._header_style(ws, headers, COLOR_GREY)
         
         for idx, fiber in enumerate(self.analysis.fiber_links.all(), start=2):
-            ws.cell(row=idx, column=1, value=fiber.link_id or '')
+            ws.cell(row=idx, column=1, value=fiber.apparato or '')
+            ws.cell(row=idx, column=2, value=fiber.link_id or '')
             ws.cell(row=idx, column=2, value=fiber.link_status or '')
             ws.cell(row=idx, column=3, value=fiber.ril or '')
             ws.cell(row=idx, column=4, value=float(fiber.wl1) if fiber.wl1 else '')
@@ -292,25 +299,26 @@ class ExcelExporter:
 
     def _sheet_sfp(self):
         ws = self.wb.create_sheet("SFP Modules")
-        headers = ['Port', 'RiL', 'Board', 'LNH', 'Vendor', 'Device Name', 'REV', 
+        headers = ['Apparato', 'Port', 'RiL', 'Board', 'LNH', 'Vendor', 'Device Name', 'REV', 
                    'Serial', 'Date', 'Ericsson Product', 'WL (nm)', 'Temp (°C)', 
                    'TXbs (%)', 'TX (dBm)', 'RX (dBm)', 'TN', 'RX Critical']
         self._header_style(ws, headers, COLOR_GOLD)
         
         for idx, sfp in enumerate(self.analysis.sfp_modules.all(), start=2):
-            ws.cell(row=idx, column=1, value=sfp.port or '')
-            ws.cell(row=idx, column=2, value=sfp.ril or '')
-            ws.cell(row=idx, column=3, value=sfp.board or '')
-            ws.cell(row=idx, column=4, value=sfp.lnh or '')
-            ws.cell(row=idx, column=5, value=sfp.vendor or '')
-            ws.cell(row=idx, column=6, value=sfp.device_name or '')
-            ws.cell(row=idx, column=7, value=sfp.rev or '')
-            ws.cell(row=idx, column=8, value=sfp.serial or '')
-            ws.cell(row=idx, column=9, value=sfp.date or '')
-            ws.cell(row=idx, column=10, value=sfp.ericsson_product or '')
+            ws.cell(row=idx, column=1, value=sfp.apparato or '')
+            ws.cell(row=idx, column=2, value=sfp.port or '')
+            ws.cell(row=idx, column=4, value=sfp.ril or '')
+            ws.cell(row=idx, column=4, value=sfp.board or '')
+            ws.cell(row=idx, column=5, value=sfp.lnh or '')
+            ws.cell(row=idx, column=6, value=sfp.vendor or '')
+            ws.cell(row=idx, column=7, value=sfp.device_name or '')
+            ws.cell(row=idx, column=8, value=sfp.rev or '')
+            ws.cell(row=idx, column=9, value=sfp.serial or '')
+            ws.cell(row=idx, column=10, value=sfp.date or '')
+            ws.cell(row=idx, column=11, value=sfp.ericsson_product or '')
             ws.cell(row=idx, column=11, value=float(sfp.wl) if sfp.wl else '')
-            ws.cell(row=idx, column=12, value=sfp.temperature if sfp.temperature else '')
-            ws.cell(row=idx, column=13, value=sfp.txbs if sfp.txbs else '')
+            ws.cell(row=idx, column=13, value=sfp.temperature if sfp.temperature else '')
+            ws.cell(row=idx, column=14, value=sfp.txbs if sfp.txbs else '')
             ws.cell(row=idx, column=14, value=float(sfp.tx_dbm) if sfp.tx_dbm else '')
             ws.cell(row=idx, column=15, value=float(sfp.rx_dbm) if sfp.rx_dbm else '')
             ws.cell(row=idx, column=16, value='Sì' if sfp.is_tn_backhaul else 'No')
@@ -331,16 +339,17 @@ class ExcelExporter:
 
     def _sheet_branch_pairs(self):
         ws = self.wb.create_sheet("Branch Pairs")
-        headers = ['FRU', 'Board', 'RF Port', 'Branch Pair', 'Risultato',
+        headers = ['Apparato', 'FRU', 'Board', 'RF Port', 'Branch Pair', 'Risultato',
                    'Warning (OKW)', 'Critical (NOK)']
         self._header_style(ws, headers, COLOR_DARK)
 
         for idx, bp in enumerate(self.analysis.branch_pairs.all(), start=2):
-            ws.cell(row=idx, column=1, value=bp.fru)
-            ws.cell(row=idx, column=2, value=bp.board)
-            ws.cell(row=idx, column=3, value=bp.rf_port)
-            ws.cell(row=idx, column=4, value=bp.branch_pair)
-            ws.cell(row=idx, column=5, value=bp.result)
+            ws.cell(row=idx, column=1, value=bp.apparato or '')
+            ws.cell(row=idx, column=2, value=bp.fru)
+            ws.cell(row=idx, column=4, value=bp.board)
+            ws.cell(row=idx, column=4, value=bp.rf_port)
+            ws.cell(row=idx, column=5, value=bp.branch_pair)
+            ws.cell(row=idx, column=6, value=bp.result)
             ws.cell(row=idx, column=6, value='Sì' if bp.is_warning else 'No')
             ws.cell(row=idx, column=7, value='Sì' if bp.is_critical else 'No')
             if bp.is_critical:
@@ -356,7 +365,7 @@ class ExcelExporter:
     def _sheet_lga(self):
         ws = self.wb.create_sheet("LGA Alarms")
         headers = [
-            'Timestamp (UTC)', 'Severità', 'Codice Sev',
+            'Apparato', 'Timestamp (UTC)', 'Severità', 'Codice Sev',
             'Specific Problem', 'Managed Object', 'Additional Info',
         ]
         self._header_style(ws, headers, COLOR_NAVY)
@@ -378,12 +387,13 @@ class ExcelExporter:
         for idx, alarm in enumerate(self.analysis.lga_alarms.all(), start=2):
             # Timestamp come stringa leggibile
             ts_str = alarm.timestamp.strftime('%Y-%m-%d %H:%M:%S') if alarm.timestamp else ''
-            ws.cell(row=idx, column=1, value=ts_str)
+            ws.cell(row=idx, column=1, value=alarm.apparato or '')
+            ws.cell(row=idx, column=2, value=ts_str)
             ws.cell(row=idx, column=2, value=SEV_LABEL.get(alarm.severity, alarm.severity))
-            ws.cell(row=idx, column=3, value=alarm.severity)
-            ws.cell(row=idx, column=4, value=alarm.specific_problem)
-            ws.cell(row=idx, column=5, value=alarm.managed_object)
-            ws.cell(row=idx, column=6, value=alarm.additional_info)
+            ws.cell(row=idx, column=4, value=alarm.severity)
+            ws.cell(row=idx, column=5, value=alarm.specific_problem)
+            ws.cell(row=idx, column=6, value=alarm.managed_object)
+            ws.cell(row=idx, column=7, value=alarm.additional_info)
 
             # Evidenziazione per Critical e Major; grigio chiaro per Ceasing
             if alarm.severity in SEV_COLOR:
@@ -399,20 +409,21 @@ class ExcelExporter:
     def _sheet_alarm_ports(self):
         ws = self.wb.create_sheet("Alarm Ports")
         headers = [
-            'FRU', 'Alarm Port', 'Alarm Slogan',
+            'Apparato', 'FRU', 'Alarm Port', 'Alarm Slogan',
             'Normally Open', 'Active External Alarm',
             'Admin State Code', 'Admin State Label',
         ]
         self._header_style(ws, headers, "5a3e00")
 
         for idx, ap in enumerate(self.analysis.alarm_ports.all(), start=2):
-            ws.cell(row=idx, column=1, value=ap.fru)
-            ws.cell(row=idx, column=2, value=ap.alarm_port)
-            ws.cell(row=idx, column=3, value=ap.alarm_slogan)
-            ws.cell(row=idx, column=4, value='true' if ap.normally_open else 'false')
-            ws.cell(row=idx, column=5, value='true' if ap.active_external_alarm else 'false')
-            ws.cell(row=idx, column=6, value=ap.administrative_state_code)
-            ws.cell(row=idx, column=7, value=ap.administrative_state_label)
+            ws.cell(row=idx, column=1, value=ap.apparato or '')
+            ws.cell(row=idx, column=2, value=ap.fru)
+            ws.cell(row=idx, column=3, value=ap.alarm_port)
+            ws.cell(row=idx, column=4, value=ap.alarm_slogan)
+            ws.cell(row=idx, column=5, value='true' if ap.normally_open else 'false')
+            ws.cell(row=idx, column=6, value='true' if ap.active_external_alarm else 'false')
+            ws.cell(row=idx, column=7, value=ap.administrative_state_code)
+            ws.cell(row=idx, column=8, value=ap.administrative_state_label)
 
             if ap.active_external_alarm:
                 self._row_fill(ws, idx, BG_CRITICAL)

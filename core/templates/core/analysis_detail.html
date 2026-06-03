@@ -1,5 +1,5 @@
 {% extends 'core/base.html' %}
-{% block title %}Analisi {{ analysis.log_file.apparato_nome }} - Ericsson Analyzer{% endblock %}
+{% block title %}Analisi {{ analysis.apparato_nome }} - Ericsson Analyzer{% endblock %}
 
 {% block content %}
 
@@ -8,16 +8,13 @@
     <div>
         <h4 class="fw-bold mb-1">
             <i class="bi bi-hdd-network me-2 text-primary"></i>
-            {{ analysis.log_file.apparato_nome|default:"Apparato sconosciuto" }}
+            {{ analysis.apparato_nome|default:"Apparato sconosciuto" }}
         </h4>
         <div class="text-muted small">
             <i class="bi bi-calendar3 me-1"></i>{{ analysis.created_at|date:"d/m/Y H:i" }}
-            {% if analysis.log_file.sw_version %}
-            &nbsp;·&nbsp;<i class="bi bi-tag me-1"></i>SW: {{ analysis.log_file.sw_version }}
-            {% endif %}
-            {% if analysis.log_file.ip_address %}
-            &nbsp;·&nbsp;<i class="bi bi-wifi me-1"></i>{{ analysis.log_file.ip_address }}
-            {% endif %}
+            {% for lf in analysis.log_files.all %}
+            &nbsp;·&nbsp;<i class="bi bi-tag me-1"></i>{{ lf.apparato_nome }}: SW {{ lf.sw_version }} &nbsp;<i class="bi bi-wifi me-1"></i>{{ lf.ip_address }}
+            {% endfor %}
         </div>
     </div>
     <div class="d-flex gap-2">
@@ -121,13 +118,14 @@
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead class="table-primary">
                 <tr>
-                    <th>FRU</th><th>Board</th><th>RF</th><th>BP</th>
+                    <th>Apparato</th><th>FRU</th><th>Board</th><th>RF</th><th>BP</th>
                     <th>TX</th><th>VSWR</th><th>Ret. Loss</th><th>RX (dBm)</th><th>Cell ID</th><th>Stato</th>
                 </tr>
             </thead>
             <tbody>
             {% for u in radio_units %}
             <tr class="{% if u.is_vswr_critical %}row-critical{% elif u.is_vswr_warning %}row-warning{% endif %}">
+                <td class="text-muted small">{{ u.apparato }}</td>
                 <td class="fw-semibold">{{ u.fru }}</td>
                 <td class="text-muted">{{ u.board }}</td>
                 <td>{{ u.rf_port }}</td>
@@ -143,7 +141,7 @@
                     {% else %}<span class="badge bg-success">OK</span>{% endif %}
                 </td>
             </tr>
-            {% empty %}<tr><td colspan="10" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
+            {% empty %}<tr><td colspan="11" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
@@ -154,11 +152,12 @@
         <div class="table-responsive">
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead class="table-danger">
-                <tr><th>Severity</th><th>Alarm Nr.</th><th>Causa</th></tr>
+                <tr><th>Apparato</th><th>Severity</th><th>Alarm Nr.</th><th>Causa</th></tr>
             </thead>
             <tbody>
             {% for a in alarms %}
             <tr class="{% if a.severity == 'CRITICAL' %}row-critical{% elif a.severity == 'MAJOR' %}row-warning{% endif %}">
+                <td class="text-muted small">{{ a.apparato }}</td>
                 <td>
                     {% if a.severity == 'CRITICAL' %}<span class="badge bg-danger">CRITICAL</span>
                     {% elif a.severity == 'MAJOR' %}<span class="badge bg-warning text-dark">MAJOR</span>
@@ -167,7 +166,7 @@
                 <td class="fw-bold">{{ a.alarm_number }}</td>
                 <td>{{ a.cause }}</td>
             </tr>
-            {% empty %}<tr><td colspan="3" class="text-center text-muted py-3">Nessun allarme ✅</td></tr>{% endfor %}
+            {% empty %}<tr><td colspan="4" class="text-center text-muted py-3">Nessun allarme ✅</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
@@ -179,7 +178,7 @@
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead class="table-warning">
                 <tr>
-                    <th>Nome</th><th>LNH</th><th>Board</th>
+                    <th>Apparato</th><th>Nome</th><th>LNH</th><th>Board</th>
                     <th>ST</th><th>Fault</th><th>Oper</th><th>Maint</th><th>Stat</th>
                     <th>Product Nr</th><th>REV</th><th>Serial</th><th>Date</th>
                     <th>PM Temp</th><th>Temp</th><th>UPT</th><th>Volt</th><th>SW</th>
@@ -188,6 +187,7 @@
             <tbody>
             {% for f in fru_units %}
             <tr class="{% if f.is_temp_high %}row-critical{% endif %}">
+                <td class="text-muted small">{{ f.apparato }}</td>
                 <td class="fw-semibold">{{ f.name }}</td>
                 <td class="text-muted small">{{ f.lnh|default:"—" }}</td>
                 <td class="text-muted">{{ f.board }}</td>
@@ -220,12 +220,13 @@
         <div class="table-responsive">
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead class="table-purple" style="background:#7030A0;color:white;">
-                <tr><th>Cell</th><th>SC</th><th>FRU</th><th>Board</th>
+                <tr><th>Apparato</th><th>Cell</th><th>SC</th><th>FRU</th><th>Board</th>
                     <th>PUSCH</th><th>PUCCH</th><th>A</th><th>B</th><th>C</th><th>D</th><th>Δ</th><th>Stato</th></tr>
             </thead>
             <tbody>
             {% for p in pusch_data %}
             <tr class="{% if p.is_rssi_high %}row-warning{% endif %}">
+                <td class="text-muted small">{{ p.apparato }}</td>
                 <td class="fw-semibold">{{ p.cell }}</td>
                 <td>{{ p.sc }}</td><td>{{ p.fru }}</td><td class="text-muted">{{ p.board }}</td>
                 <td>{{ p.pusch }}</td><td>{{ p.pucch }}</td>
@@ -235,7 +236,7 @@
                 <td>{% if p.is_rssi_high %}<span class="badge bg-warning text-dark">ALTO</span>
                     {% else %}<span class="badge bg-success">OK</span>{% endif %}</td>
             </tr>
-            {% empty %}<tr><td colspan="12" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
+            {% empty %}<tr><td colspan="13" class="text-center text-muted py-3">Nessun dato</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
@@ -251,11 +252,12 @@
             <tbody>
             {% for r in ret_devices %}
             <tr>
+                <td class="text-muted small">{{ r.apparato }}</td>
                 <td>{{ r.antenna_group }}</td><td>{{ r.antenna_near_unit }}</td>
                 <td>{{ r.radio_unit|default:"—" }}</td><td>{{ r.status }}</td>
                 <td>{{ r.device_type }}</td><td>{{ r.product_nr|default:"—" }}</td><td class="text-muted small">{{ r.revision|default:"—" }}</td><td class="text-muted small font-monospace">{{ r.unique_id|default:"—" }}</td>
             </tr>
-            {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">Nessun dispositivo RET</td></tr>{% endfor %}
+            {% empty %}<tr><td colspan="9" class="text-center text-muted py-3">Nessun dispositivo RET</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
@@ -271,11 +273,12 @@
             <tbody>
             {% for t in tma_devices %}
             <tr>
+                <td class="text-muted small">{{ t.apparato }}</td>
                 <td>{{ t.antenna_group }}</td><td>{{ t.antenna_near_unit }}</td>
                 <td>{{ t.radio_unit|default:"—" }}</td><td>{{ t.status }}</td>
                 <td>{{ t.device_type }}</td><td>{{ t.product_nr|default:"—" }}</td><td class="text-muted small">{{ t.revision|default:"—" }}</td><td class="text-muted small font-monospace">{{ t.unique_id|default:"—" }}</td>
             </tr>
-            {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">Nessun dispositivo TMA</td></tr>{% endfor %}
+            {% empty %}<tr><td colspan="9" class="text-center text-muted py-3">Nessun dispositivo TMA</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
@@ -296,13 +299,14 @@
                     <th rowspan="2">Status</th>
                 </tr>
                 <tr>
-                    <th style="border-left:2px solid #dee2e6;">WL</th><th>Temp</th><th>TXbs</th><th>TX dBm</th><th>RX dBm</th>
+                    <th>Apparato</th><th style="border-left:2px solid #dee2e6;">WL</th><th>Temp</th><th>TXbs</th><th>TX dBm</th><th>RX dBm</th>
                     <th style="border-left:2px solid #dee2e6;">WL</th><th>Temp</th><th>TXbs</th><th>TX dBm</th><th>RX dBm</th>
                 </tr>
             </thead>
             <tbody>
             {% for f in fiber_links %}
             <tr class="{% if f.is_link_down %}row-critical{% elif f.is_dl_critical or f.is_ul_critical %}row-warning{% endif %}">
+                <td class="text-muted small">{{ f.apparato }}</td>
                 <td class="fw-semibold">{{ f.link_id }}</td>
                 <td><span class="badge {% if f.link_status == 'Up' %}bg-success{% else %}bg-danger{% endif %}">{{ f.link_status }}</span></td>
                 <td>{{ f.ril }}</td>
@@ -342,7 +346,7 @@
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead style="background:#BF8F00;color:white;">
                 <tr>
-                    <th>Port</th><th>RiL</th><th>Board</th><th>LNH</th>
+                    <th>Apparato</th><th>Port</th><th>RiL</th><th>Board</th><th>LNH</th>
                     <th>Vendor</th><th>Product</th><th>REV</th><th>Serial</th><th>Date</th>
                     <th>Ericsson Prod</th><th>WL</th><th>Temp</th><th>TXbs</th>
                     <th>TX dBm</th><th>RX dBm</th><th>TN</th><th>Status</th>
@@ -351,6 +355,7 @@
             <tbody>
             {% for s in sfp_modules %}
             <tr class="{% if s.is_rx_critical %}row-critical{% elif s.is_tn_backhaul %}row-info{% endif %}">
+                <td class="text-muted small">{{ s.apparato }}</td>
                 <td class="fw-semibold">{{ s.port }}</td>
                 <td>{{ s.ril|default:"—" }}</td>
                 <td class="text-muted">{{ s.board|default:"—" }}</td>
@@ -393,11 +398,12 @@
         <div class="table-responsive">
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead style="background:#243F60;color:white;">
-                <tr><th>FRU</th><th>Board</th><th>RF Port</th><th>Branch Pair</th><th>Risultato</th></tr>
+                <tr><th>Apparato</th><th>FRU</th><th>Board</th><th>RF Port</th><th>Branch Pair</th><th>Risultato</th></tr>
             </thead>
             <tbody>
             {% for b in branch_pairs %}
             <tr class="{% if b.is_critical %}row-critical{% elif b.is_warning %}row-warning{% else %}row-ok{% endif %}">
+                <td class="text-muted small">{{ b.apparato }}</td>
                 <td class="fw-semibold">{{ b.fru }}</td>
                 <td class="text-muted">{{ b.board }}</td>
                 <td>{{ b.rf_port }}</td><td>{{ b.branch_pair }}</td>
@@ -420,7 +426,7 @@
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead style="background:#243F60;color:white;">
                 <tr>
-                    <th>Port</th><th>Board</th><th>Vendor</th><th>Product</th>
+                    <th>Apparato</th><th>Port</th><th>Board</th><th>Vendor</th><th>Product</th>
                     <th>Serial</th><th>WL</th><th>Temp</th>
                     <th>TX dBm</th><th>RX dBm</th><th>Status</th>
                 </tr>
@@ -428,6 +434,7 @@
             <tbody>
             {% for tn in tn_backhaul %}
             <tr class="{% if tn.is_rx_critical %}row-critical{% elif not tn.has_optical_data %}row-warning{% else %}row-ok{% endif %}">
+                <td class="text-muted small">{{ tn.apparato }}</td>
                 <td class="fw-semibold">{{ tn.port }}</td>
                 <td class="text-muted">{{ tn.board }}</td>
                 <td>{{ tn.vendor }}</td>
@@ -452,7 +459,7 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="10" class="text-center text-muted py-3">Nessun dato TN Backhaul</td></tr>
+            <tr><td colspan="11" class="text-center text-muted py-3">Nessun dato TN Backhaul</td></tr>
             {% endfor %}
             </tbody>
         </table>
@@ -464,6 +471,7 @@
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead style="background:#5a3e00;color:white;">
                 <tr>
+                    <th>Apparato</th>
                     <th>FRU</th>
                     <th>Alarm Port</th>
                     <th>Slogan</th>
@@ -475,6 +483,7 @@
             <tbody>
             {% for ap in alarm_ports %}
             <tr class="{% if ap.active_external_alarm %}table-danger{% endif %}">
+                <td class="text-muted small">{{ ap.apparato }}</td>
                 <td>{{ ap.fru }}</td>
                 <td class="font-monospace">{{ ap.alarm_port }}</td>
                 <td class="fw-semibold">{{ ap.alarm_slogan }}</td>
@@ -487,7 +496,7 @@
                 <td>{{ ap.administrative_state_code }} ({{ ap.administrative_state_label }})</td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" class="text-center text-muted py-3">Nessun dato Alarm Ports</td></tr>
+            <tr><td colspan="7" class="text-center text-muted py-3">Nessun dato Alarm Ports</td></tr>
             {% endfor %}
             </tbody>
         </table>
@@ -505,6 +514,7 @@
         <table class="table table-sm table-hover align-middle mb-0 small">
             <thead style="background:#1a3a5c;color:white;">
                 <tr>
+                    <th>Apparato</th>
                     <th>Timestamp (UTC)</th>
                     <th>Sev</th>
                     <th>Severità</th>
@@ -516,6 +526,7 @@
             <tbody>
             {% for alarm in lga_alarms %}
             <tr class="{% if alarm.severity == 'C' %}table-danger{% elif alarm.severity == 'M' %}table-warning{% elif alarm.severity == '*' %}table-secondary{% endif %}">
+                <td class="text-muted small">{{ alarm.apparato }}</td>
                 <td class="text-nowrap font-monospace">{{ alarm.timestamp|date:"Y-m-d H:i:s" }}</td>
                 <td>
                     {% if alarm.severity == 'C' %}<span class="badge bg-danger">C</span>
@@ -531,7 +542,7 @@
                 <td class="text-muted">{{ alarm.additional_info }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" class="text-center text-muted py-3">Nessun dato LGA</td></tr>
+            <tr><td colspan="7" class="text-center text-muted py-3">Nessun dato LGA</td></tr>
             {% endfor %}
             </tbody>
         </table>

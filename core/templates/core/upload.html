@@ -23,13 +23,13 @@
                      class="border border-2 border-dashed rounded-3 p-5 text-center"
                      style="border-color: #0F4C81 !important; background: #f8fafc; cursor: pointer; transition: all 0.2s;">
                     <i class="bi bi-cloud-upload display-4 text-primary mb-3 d-block"></i>
-                    <h5 class="fw-semibold">Trascina qui il file di log</h5>
-                    <p class="text-muted mb-3">oppure clicca per selezionarlo</p>
-                    <input type="file" id="fileInput" accept=".txt,.log" class="d-none">
+                    <h5 class="fw-semibold">Trascina qui i file di log</h5>
+                    <p class="text-muted mb-3">oppure clicca per selezionarli (max 2 file per sito)</p>
+                    <input type="file" id="fileInput" accept=".txt,.log" class="d-none" multiple>
                     <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
                         <i class="bi bi-folder2-open me-2"></i>Sfoglia file
                     </button>
-                    <p class="text-muted mt-3 mb-0 small">Formati accettati: .txt, .log &mdash; Max 50 MB</p>
+                    <p class="text-muted mt-3 mb-0 small">Formati accettati: .txt, .log &mdash; Max 50 MB per file &mdash; Max 2 file per analisi</p>
                 </div>
 
                 <!-- Info file selezionato -->
@@ -125,7 +125,7 @@
     const errorC     = document.getElementById('errorContainer');
     const errorMsg   = document.getElementById('errorMsg');
 
-    let selectedFile = null;
+    let selectedFiles = [];
 
     // Drag & Drop
     dropZone.addEventListener('dragover', e => {
@@ -138,38 +138,37 @@
     dropZone.addEventListener('drop', e => {
         e.preventDefault();
         dropZone.style.background = '#f8fafc';
-        const f = e.dataTransfer.files[0];
-        if (f) setFile(f);
+        setFiles(Array.from(e.dataTransfer.files));
     });
 
     fileInput.addEventListener('change', e => {
-        if (e.target.files[0]) setFile(e.target.files[0]);
+        setFiles(Array.from(e.target.files));
     });
 
-    function setFile(f) {
-        selectedFile = f;
-        fileName.textContent = f.name;
-        fileSize.textContent = formatSize(f.size);
+    function setFiles(files) {
+        selectedFiles = files.slice(0, 2);  // max 2
+        fileName.textContent = selectedFiles.map(f => f.name).join(', ');
+        fileSize.textContent = selectedFiles.map(f => formatSize(f.size)).join(' + ');
         fileInfo.classList.remove('d-none');
         btnAnalyze.classList.remove('d-none');
         errorC.classList.add('d-none');
     }
 
     btnRemove.addEventListener('click', () => {
-        selectedFile = null;
+        selectedFiles = [];
         fileInfo.classList.add('d-none');
         btnAnalyze.classList.add('d-none');
         fileInput.value = '';
     });
 
     btnAnalyze.addEventListener('click', () => {
-        if (!selectedFile) return;
-        uploadFile(selectedFile);
+        if (!selectedFiles.length) return;
+        uploadFiles(selectedFiles);
     });
 
-    function uploadFile(file) {
+    function uploadFiles(files) {
         const formData = new FormData();
-        formData.append('file', file);
+        files.forEach(f => formData.append('files', f));
         formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 
         btnAnalyze.disabled = true;

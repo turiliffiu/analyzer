@@ -8,13 +8,14 @@ from django.utils import timezone
 
 class LogFile(models.Model):
     """File di log caricato dall'utente"""
-    
+
+    analysis = models.ForeignKey('Analysis', on_delete=models.CASCADE, related_name='log_files', null=True, blank=True)
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='log_files')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     filename = models.CharField(max_length=255)
     file = models.FileField(upload_to='logs/%Y/%m/%d/')
     file_size = models.IntegerField(help_text="Dimensione file in bytes")
-    
+
     # Metadati estratti dal log
     apparato_nome = models.CharField(max_length=100, blank=True)
     timestamp = models.CharField(max_length=50, blank=True)
@@ -31,11 +32,11 @@ class LogFile(models.Model):
 
 
 class Analysis(models.Model):
-    """Analisi completa di un log file"""
-    
-    log_file = models.OneToOneField(LogFile, on_delete=models.CASCADE, related_name='analysis')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='analyses', null=True)  # null=True temporaneo per migration
+    """Analisi completa di uno o più log file (stesso sito, apparati diversi)"""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='analyses', null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    apparato_nome = models.CharField(max_length=200, blank=True)  # es. "AGE1T + AGE1V"
     
     # Statistiche globali
     radio_units_count = models.IntegerField(default=0)
@@ -62,6 +63,7 @@ class RadioUnit(models.Model):
     """Radio Unit con dati VSWR"""
     
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='radio_units')
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     
     fru = models.CharField(max_length=50)  # Radio-S100-1
     board = models.CharField(max_length=50)  # RRU449944B144B3C
@@ -100,6 +102,7 @@ class Alarm(models.Model):
     ]
     
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='alarms')
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     
     severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES)
     alarm_number = models.CharField(max_length=50)
@@ -118,6 +121,7 @@ class FRU(models.Model):
     """Field Replaceable Unit"""
     
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='fru_units')
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     
     name = models.CharField(max_length=50)  # BB-1, Radio-S100-1
     board = models.CharField(max_length=100)
@@ -153,6 +157,7 @@ class PuschData(models.Model):
     """Dati PUSCH/PUCCH RSSI"""
     
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='pusch_data')
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     
     cell = models.CharField(max_length=50)  # FDD=MH45M2
     sc = models.CharField(max_length=50)
@@ -184,6 +189,7 @@ class RETDevice(models.Model):
     """Dispositivo RET (Remote Electrical Tilt)"""
     
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='ret_devices')
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     
     antenna_group = models.CharField(max_length=50)
     antenna_near_unit = models.CharField(max_length=50)
@@ -207,6 +213,7 @@ class TMADevice(models.Model):
     """Dispositivo TMA (Tower Mounted Amplifier)"""
     
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='tma_devices')
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     
     antenna_group = models.CharField(max_length=50)
     antenna_near_unit = models.CharField(max_length=50)
@@ -230,6 +237,7 @@ class FiberLink(models.Model):
     """Collegamento Fibra Ottica - dati completi entrambi i lati"""
     
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='fiber_links')
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     
     # Identificazione
     link_id = models.CharField(max_length=10)  # 1, 2, 3
@@ -271,6 +279,7 @@ class SFPModule(models.Model):
     """Modulo SFP"""
     
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='sfp_modules')
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     
     port = models.CharField(max_length=50)
     fru = models.CharField(max_length=50)
@@ -312,6 +321,7 @@ class BranchPair(models.Model):
     """Branch Pair Analysis"""
     
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='branch_pairs')
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     
     fru = models.CharField(max_length=50)
     board = models.CharField(max_length=100)
@@ -375,6 +385,7 @@ class UserProfile(models.Model):
 class TNBackhaul(models.Model):
     """Transport Network Backhaul - porte TN"""
     analysis = models.ForeignKey(Analysis, on_delete=models.CASCADE, related_name='tn_backhaul')
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     
     # Identificazione
     board = models.CharField(max_length=50)  # BB6648
@@ -423,6 +434,7 @@ class LgaAlarm(models.Model):
     analysis = models.ForeignKey(
         Analysis, on_delete=models.CASCADE, related_name='lga_alarms'
     )
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
     timestamp = models.DateTimeField()
     severity = models.CharField(max_length=1, choices=SEVERITY_CHOICES)
     specific_problem = models.CharField(max_length=500)
@@ -454,6 +466,7 @@ class AlarmPort(models.Model):
     analysis = models.ForeignKey(
         Analysis, on_delete=models.CASCADE, related_name='alarm_ports'
     )
+    apparato = models.CharField(max_length=100, blank=True)  # nome apparato sorgente
 
     fru = models.CharField(max_length=50)           # BB-1
     alarm_port = models.IntegerField()              # 2, 3, 4, 7

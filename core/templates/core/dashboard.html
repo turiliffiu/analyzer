@@ -87,9 +87,9 @@
                         <td>
                             <div class="fw-semibold">
                                 <i class="bi bi-hdd-network me-1 text-muted"></i>
-                                {{ analysis.log_file.apparato_nome|default:"—" }}
+                                {{ analysis.apparato_nome|default:"—" }}
                             </div>
-                            <small class="text-muted">{{ analysis.log_file.filename|truncatechars:30 }}</small>
+                            <small class="text-muted">{% for lf in analysis.log_files.all %}{{ lf.filename|truncatechars:20 }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>
                         </td>
                         <td class="text-nowrap">
                             <small>{{ analysis.created_at|date:"d/m/Y H:i" }}</small>
@@ -117,7 +117,7 @@
                                 <a href="/analysis/{{ analysis.id }}/" class="btn btn-outline-primary">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <button type="button" class="btn btn-outline-danger" onclick="confirmDelete({{ analysis.id }}, '{{ analysis.log_file.apparato_nome|escapejs }}')">
+                                <button type="button" class="btn btn-outline-danger" onclick="confirmDelete({{ analysis.id }}, '{{ analysis.apparato_nome|escapejs }}')">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>

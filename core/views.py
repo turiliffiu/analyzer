@@ -45,42 +45,25 @@ class UploadView(LoginRequiredMixin, TemplateView):
         return context
 
     def post(self, request):
-        """Gestisce upload file e avvia parsing automatico"""
-        form = LogFileUploadForm(request.POST, request.FILES)
+        """Gestisce upload multi-file e avvia parsing aggregato"""
+        files = request.FILES.getlist('files')
 
-        if not form.is_valid():
-            errors = '; '.join([str(e) for errs in form.errors.values() for e in errs])
-            return JsonResponse({'error': errors}, status=400)
+        if not files:
+            return JsonResponse({'error': 'Nessun file selezionato'}, status=400)
 
-        log_file_obj = request.FILES['file']
+        for f in files:
+            if not f.name.endswith(('.txt', '.log')):
+                return JsonResponse({'error': f'File {f.name}: solo .txt o .log accettati'}, status=400)
+            if f.size > 50 * 1024 * 1024:
+                return JsonResponse({'error': f'File {f.name} troppo grande (max 50MB)'}, status=400)
 
         try:
-            # Leggi contenuto (UTF-8 con fallback latin-1)
-            try:
-                content = log_file_obj.read().decode('utf-8')
-            except UnicodeDecodeError:
-                log_file_obj.seek(0)
-                content = log_file_obj.read().decode('latin-1')
-
-            log_file_obj.seek(0)
-
-            # Crea record LogFile
-            log_file = LogFile.objects.create(
-                filename=log_file_obj.name,
-                file=log_file_obj,
-                file_size=log_file_obj.size,
-                uploaded_by=request.user
-            )
-
-            # Parse e salva tutto in database (transazione atomica)
-            analysis = self._parse_and_save(log_file, content, request.user)
-
+            analysis = self._parse_and_save(files, request.user)
             return JsonResponse({
                 'status': 'success',
                 'analysis_id': analysis.id,
                 'redirect_url': f'/analysis/{analysis.id}/'
             })
-
         except Exception as e:
             import traceback
             return JsonResponse({
@@ -89,219 +72,238 @@ class UploadView(LoginRequiredMixin, TemplateView):
             }, status=500)
 
     @transaction.atomic
-    def _parse_and_save(self, log_file, content, user):
-        """Parsa log ed esegue tutti i parser salvando su DB"""
+    def _parse_and_save(self, files, user):
+        """Parsa uno o più file log e aggrega i dati in una singola Analysis"""
 
-        # Estrai metadati apparato
-        base_parser = BaseParser(content)
-        metadata = base_parser.extract_metadata()
+        # --- Crea Analysis vuota ---
+        analysis = Analysis.objects.create(user=user)
 
-        log_file.apparato_nome = metadata.get('apparato_nome', '')
-        log_file.timestamp = metadata.get('timestamp', '')
-        log_file.ip_address = metadata.get('ip_address')
-        log_file.sw_version = metadata.get('sw_version', '')
-        log_file.save()
+        apparati = []
+        all_radio_data = []
+        all_alarm_data = []
+        all_fru_data = []
+        all_pusch_data = []
+        all_ret_tma_data = {'ret': [], 'tma': []}
+        all_fiber_data = []
+        all_sfp_data = []
+        all_branch_data = []
+        all_tn_data = []
+        all_lga_data = []
+        all_alarm_port_data = []
 
-        # Crea oggetto Analysis
-        analysis = Analysis.objects.create(log_file=log_file, user=user)
+        for file_obj in files:
+            # Leggi contenuto
+            try:
+                text = file_obj.read().decode('utf-8')
+            except UnicodeDecodeError:
+                file_obj.seek(0)
+                text = file_obj.read().decode('latin-1')
+            file_obj.seek(0)
 
-        # --- 1. Radio Units (VSWR) ---
-        radio_parser = RadioParser(content)
-        radio_data = radio_parser.parse()
-        for item in radio_data:
+            # Estrai metadati
+            base_parser = BaseParser(text)
+            metadata = base_parser.extract_metadata()
+            apparato = metadata.get('apparato_nome', file_obj.name)
+            apparati.append(apparato)
+
+            # Salva LogFile collegato all'Analysis
+            log_file = LogFile.objects.create(
+                analysis=analysis,
+                filename=file_obj.name,
+                file=file_obj,
+                file_size=file_obj.size,
+                uploaded_by=user,
+                apparato_nome=apparato,
+                timestamp=metadata.get('timestamp', ''),
+                ip_address=metadata.get('ip_address'),
+                sw_version=metadata.get('sw_version', ''),
+            )
+
+            # --- Parsing con tag apparato ---
+            radio_data = RadioParser(text).parse()
+            for item in radio_data:
+                item['apparato'] = apparato
+            all_radio_data.extend(radio_data)
+
+            alarm_data = AlarmParser(text).parse()
+            for item in alarm_data:
+                item['apparato'] = apparato
+            all_alarm_data.extend(alarm_data)
+
+            fru_data = FRUParser(text).parse()
+            for item in fru_data:
+                item['apparato'] = apparato
+            all_fru_data.extend(fru_data)
+
+            pusch_data = PuschParser(text).parse()
+            for item in pusch_data:
+                item['apparato'] = apparato
+            all_pusch_data.extend(pusch_data)
+
+            ret_tma = RETParser(text).parse()
+            for item in ret_tma.get('ret', []):
+                item['apparato'] = apparato
+            for item in ret_tma.get('tma', []):
+                item['apparato'] = apparato
+            all_ret_tma_data['ret'].extend(ret_tma.get('ret', []))
+            all_ret_tma_data['tma'].extend(ret_tma.get('tma', []))
+
+            fiber_data = FiberParser(text).parse()
+            for item in fiber_data:
+                item['apparato'] = apparato
+            all_fiber_data.extend(fiber_data)
+
+            sfp_data = SFPParser(text).parse()
+            for item in sfp_data:
+                item['apparato'] = apparato
+            all_sfp_data.extend(sfp_data)
+
+            branch_data = BranchParser(text).parse()
+            for item in branch_data:
+                item['apparato'] = apparato
+            all_branch_data.extend(branch_data)
+
+            tn_data = TNBackhaulParser(text).parse()
+            for item in tn_data:
+                item['apparato'] = apparato
+            all_tn_data.extend(tn_data)
+
+            lga_data = LgaParser(text).parse()
+            for item in lga_data:
+                item['apparato'] = apparato
+            all_lga_data.extend(lga_data)
+
+            alarm_port_data = AlarmPortParser(text).parse()
+            for item in alarm_port_data:
+                item['apparato'] = apparato
+            all_alarm_port_data.extend(alarm_port_data)
+
+        # --- Nome aggregato Analysis ---
+        analysis.apparato_nome = ' + '.join(apparati)
+        analysis.save()
+
+        # --- Salva tutti i record nel DB ---
+        for item in all_radio_data:
             RadioUnit.objects.create(
                 analysis=analysis,
-                fru=item['fru'],
-                board=item['board'],
-                rf_port=item['rf_port'],
-                branch_pair=item['branch_pair'],
-                tx=item.get('tx'),
-                tx_unit=item.get('tx_unit') or '',
-                vswr=item['vswr'] or 0,
-                return_loss=item.get('return_loss'),
+                apparato=item.get('apparato', ''),
+                fru=item['fru'], board=item['board'],
+                rf_port=item['rf_port'], branch_pair=item['branch_pair'],
+                tx=item.get('tx'), tx_unit=item.get('tx_unit') or '',
+                vswr=item['vswr'] or 0, return_loss=item.get('return_loss'),
                 rx=item.get('rx'),
                 is_vswr_warning=item.get('is_vswr_warning') or False,
                 is_vswr_critical=item.get('is_vswr_critical') or False,
                 cell_id=item.get('cell_id', ''),
             )
 
-        # --- 2. Allarmi ---
-        alarm_parser = AlarmParser(content)
-        alarm_data = alarm_parser.parse()
-        for item in alarm_data:
+        for item in all_alarm_data:
             Alarm.objects.create(
-                analysis=analysis,
-                severity=item['severity'],
-                alarm_number=item['alarm_number'],
+                analysis=analysis, apparato=item.get('apparato', ''),
+                severity=item['severity'], alarm_number=item['alarm_number'],
                 cause=item['cause'],
             )
 
-        # --- 3. FRU ---
-        fru_parser = FRUParser(content)
-        fru_data = fru_parser.parse()
-        for item in fru_data:
+        for item in all_fru_data:
             FRU.objects.create(
-                analysis=analysis,
-                name=item['name'],
-                board=item['board'],
-                lnh=item.get('lnh', ''),
-                status=item.get('status', ''),
-                fault=item.get('fault', ''),
-                oper=item.get('oper', ''),
-                maint=item.get('maint', ''),
-                stat=item.get('stat', ''),
+                analysis=analysis, apparato=item.get('apparato', ''),
+                name=item['name'], board=item['board'],
+                lnh=item.get('lnh', ''), status=item.get('status', ''),
+                fault=item.get('fault', ''), oper=item.get('oper', ''),
+                maint=item.get('maint', ''), stat=item.get('stat', ''),
                 product_number=item.get('product_number', ''),
-                rev=item.get('rev', ''),
-                serial=item.get('serial', ''),
-                date=item.get('date', ''),
-                pmtemp=item.get('pmtemp', ''),
-                temp=item.get('temp'),
-                upt=item.get('upt', ''),
-                volt=item.get('volt', ''),
-                sw=item.get('sw', ''),
+                rev=item.get('rev', ''), serial=item.get('serial', ''),
+                date=item.get('date', ''), pmtemp=item.get('pmtemp', ''),
+                temp=item.get('temp'), upt=item.get('upt', ''),
+                volt=item.get('volt', ''), sw=item.get('sw', ''),
                 is_temp_high=item.get('is_temp_high', False),
             )
-        # --- 4. PUSCH/PUCCH ---
-        pusch_parser = PuschParser(content)
-        pusch_data = pusch_parser.parse()
-        for item in pusch_data:
+
+        for item in all_pusch_data:
             PuschData.objects.create(
-                analysis=analysis,
-                cell=item['cell'],
-                sc=item['sc'],
-                fru=item['fru'],
-                board=item['board'],
-                pusch=item['pusch'],
-                pucch=item['pucch'],
-                port_a=item.get('port_a'),
-                port_b=item.get('port_b'),
-                port_c=item.get('port_c'),
-                port_d=item.get('port_d'),
+                analysis=analysis, apparato=item.get('apparato', ''),
+                cell=item['cell'], sc=item['sc'],
+                fru=item['fru'], board=item['board'],
+                pusch=item['pusch'], pucch=item['pucch'],
+                port_a=item.get('port_a'), port_b=item.get('port_b'),
+                port_c=item.get('port_c'), port_d=item.get('port_d'),
                 delta=item.get('delta'),
                 is_rssi_high=item.get('is_rssi_high', False),
             )
 
-        # --- 5. RET / TMA ---
-        ret_parser = RETParser(content)
-        ret_tma_data = ret_parser.parse()
-        for item in ret_tma_data.get('ret', []):
-            RETDevice.objects.create(analysis=analysis, **item)
-        for item in ret_tma_data.get('tma', []):
-            TMADevice.objects.create(analysis=analysis, **item)
+        for item in all_ret_tma_data['ret']:
+            RETDevice.objects.create(analysis=analysis, apparato=item.get('apparato', ''), **{k: v for k, v in item.items() if k != 'apparato'})
+        for item in all_ret_tma_data['tma']:
+            TMADevice.objects.create(analysis=analysis, apparato=item.get('apparato', ''), **{k: v for k, v in item.items() if k != 'apparato'})
 
-        # --- 6. Fiber Links ---
-        fiber_parser = FiberParser(content)
-        fiber_data = fiber_parser.parse()
-        for item in fiber_data:
+        for item in all_fiber_data:
             FiberLink.objects.create(
-                analysis=analysis,
-                link_id=item.get('link_id', ''),
-                link_status=item.get('link_status', ''),
-                ril=item.get('ril', ''),
-                wl1=item.get('wl1'),
-                temp1=item.get('temp1'),
-                txbs1=item.get('txbs1'),
-                txdbm1=item.get('txdbm1'),
-                rxdbm1=item.get('rxdbm1'),
-                wl2=item.get('wl2'),
-                temp2=item.get('temp2'),
-                txbs2=item.get('txbs2'),
-                txdbm2=item.get('txdbm2'),
-                rxdbm2=item.get('rxdbm2'),
-                dl_loss=item.get('dl_loss'),
-                ul_loss=item.get('ul_loss'),
+                analysis=analysis, apparato=item.get('apparato', ''),
+                link_id=item.get('link_id', ''), link_status=item.get('link_status', ''),
+                ril=item.get('ril', ''), wl1=item.get('wl1'), temp1=item.get('temp1'),
+                txbs1=item.get('txbs1'), txdbm1=item.get('txdbm1'), rxdbm1=item.get('rxdbm1'),
+                wl2=item.get('wl2'), temp2=item.get('temp2'), txbs2=item.get('txbs2'),
+                txdbm2=item.get('txdbm2'), rxdbm2=item.get('rxdbm2'),
+                dl_loss=item.get('dl_loss'), ul_loss=item.get('ul_loss'),
                 length=item.get('length'),
                 is_dl_critical=item.get('is_dl_critical', False),
                 is_ul_critical=item.get('is_ul_critical', False),
                 is_link_down=item.get('is_link_down', False),
             )
 
-        # --- 7. SFP Modules ---
-        sfp_parser = SFPParser(content)
-        sfp_data = sfp_parser.parse()
-        for item in sfp_data:
+        for item in all_sfp_data:
             SFPModule.objects.create(
-                analysis=analysis,
-                port=item['port'],
-                fru=item['fru'],
+                analysis=analysis, apparato=item.get('apparato', ''),
+                port=item['port'], fru=item['fru'],
                 device_name=item.get('device_name', ''),
-                ril=item.get('ril', ''),
-                board=item.get('board', ''),
-                lnh=item.get('lnh', ''),
-                vendor=item.get('vendor', ''),
-                rev=item.get('rev', ''),
-                serial=item.get('serial', ''),
-                date=item.get('date', ''),
-                ericsson_product=item.get('ericsson_product', ''),
-                wl=item.get('wl'),
-                temperature=item.get('temperature'),
-                txbs=item.get('txbs'),
-                tx_dbm=item.get('tx_dbm'),
+                ril=item.get('ril', ''), board=item.get('board', ''),
+                lnh=item.get('lnh', ''), vendor=item.get('vendor', ''),
+                rev=item.get('rev', ''), serial=item.get('serial', ''),
+                date=item.get('date', ''), ericsson_product=item.get('ericsson_product', ''),
+                wl=item.get('wl'), temperature=item.get('temperature'),
+                txbs=item.get('txbs'), tx_dbm=item.get('tx_dbm'),
                 rx_dbm=item.get('rx_dbm'),
                 is_tn_backhaul=item.get('is_tn_backhaul', False),
                 is_rx_critical=item.get('is_rx_critical', False),
             )
 
-        # --- 8. Branch Pairs ---
-        branch_parser = BranchParser(content)
-        branch_data = branch_parser.parse()
-        for item in branch_data:
+        for item in all_branch_data:
             BranchPair.objects.create(
-                analysis=analysis,
-                fru=item['fru'],
-                board=item['board'],
-                rf_port=item['rf_port'],
-                branch_pair=item['branch_pair'],
+                analysis=analysis, apparato=item.get('apparato', ''),
+                fru=item['fru'], board=item['board'],
+                rf_port=item['rf_port'], branch_pair=item['branch_pair'],
                 result=item['result'],
                 is_warning=item.get('is_warning', False),
                 is_critical=item.get('is_critical', False),
             )
 
-
-        # --- 10. TN Backhaul ---
-        tn_parser = TNBackhaulParser(content)
-        tn_data = tn_parser.parse()
-        for item in tn_data:
+        for item in all_tn_data:
             TNBackhaul.objects.create(
-                analysis=analysis,
-                board=item["board"],
-                lnh=item["lnh"],
-                port=item["port"],
-                vendor=item["vendor"],
-                vendor_product=item["vendor_product"],
-                revision=item["revision"],
-                serial=item["serial"],
-                date=item["date"],
-                ericsson_product=item["ericsson_product"],
-                wavelength=item.get("wavelength"),
-                temperature=item.get("temperature"),
-                tx_bias=item.get("tx_bias"),
-                tx_dbm=item.get("tx_dbm"),
-                rx_dbm=item.get("rx_dbm"),
-                is_rx_critical=item.get("is_rx_critical", False),
-                has_optical_data=item.get("has_optical_data", False),
-            )
-        # --- 11. LGA Alarms ---
-        lga_parser = LgaParser(content)
-        lga_data = lga_parser.parse()
-        for item in lga_data:
-            LgaAlarm.objects.create(
-                analysis=analysis,
-                timestamp=item["timestamp"],
-                severity=item["severity"],
-                specific_problem=item["specific_problem"],
-                managed_object=item.get("managed_object", ""),
-                additional_info=item.get("additional_info", ""),
+                analysis=analysis, apparato=item.get('apparato', ''),
+                board=item['board'], lnh=item['lnh'], port=item['port'],
+                vendor=item['vendor'], vendor_product=item['vendor_product'],
+                revision=item['revision'], serial=item['serial'],
+                date=item['date'], ericsson_product=item['ericsson_product'],
+                wavelength=item.get('wavelength'), temperature=item.get('temperature'),
+                tx_bias=item.get('tx_bias'), tx_dbm=item.get('tx_dbm'),
+                rx_dbm=item.get('rx_dbm'),
+                is_rx_critical=item.get('is_rx_critical', False),
+                has_optical_data=item.get('has_optical_data', False),
             )
 
-        # --- 12. Alarm Ports ---
-        alarm_port_parser = AlarmPortParser(content)
-        alarm_port_data = alarm_port_parser.parse()
-        for item in alarm_port_data:
+        for item in all_lga_data:
+            LgaAlarm.objects.create(
+                analysis=analysis, apparato=item.get('apparato', ''),
+                timestamp=item['timestamp'], severity=item['severity'],
+                specific_problem=item['specific_problem'],
+                managed_object=item.get('managed_object', ''),
+                additional_info=item.get('additional_info', ''),
+            )
+
+        for item in all_alarm_port_data:
             AlarmPort.objects.create(
-                analysis=analysis,
-                fru=item['fru'],
-                alarm_port=item['alarm_port'],
+                analysis=analysis, apparato=item.get('apparato', ''),
+                fru=item['fru'], alarm_port=item['alarm_port'],
                 active_external_alarm=item['active_external_alarm'],
                 administrative_state_code=item['administrative_state_code'],
                 administrative_state_label=item['administrative_state_label'],
@@ -309,18 +311,18 @@ class UploadView(LoginRequiredMixin, TemplateView):
                 normally_open=item['normally_open'],
             )
 
-        # --- Aggiorna contatori statistici sull'Analysis ---
-        analysis.radio_units_count = len(radio_data)
-        analysis.alarms_critical_count = sum(1 for a in alarm_data if a['severity'] == 'CRITICAL')
-        analysis.alarms_major_count = sum(1 for a in alarm_data if a['severity'] == 'MAJOR')
-        analysis.alarms_minor_count = sum(1 for a in alarm_data if a['severity'] == 'MINOR')
-        analysis.vswr_critical_count = sum(1 for r in radio_data if r.get('is_vswr_critical'))
-        analysis.fru_count = len(fru_data)
-        analysis.ret_count = len(ret_tma_data.get('ret', []))
-        analysis.tma_count = len(ret_tma_data.get('tma', []))
-        analysis.fiber_links_count = len(fiber_data)
-        analysis.sfp_modules_count = len(sfp_data)
-        analysis.pusch_cells_count = len(pusch_data)
+        # --- Aggiorna contatori ---
+        analysis.radio_units_count = len(all_radio_data)
+        analysis.alarms_critical_count = sum(1 for a in all_alarm_data if a['severity'] == 'CRITICAL')
+        analysis.alarms_major_count = sum(1 for a in all_alarm_data if a['severity'] == 'MAJOR')
+        analysis.alarms_minor_count = sum(1 for a in all_alarm_data if a['severity'] == 'MINOR')
+        analysis.vswr_critical_count = sum(1 for r in all_radio_data if r.get('is_vswr_critical'))
+        analysis.fru_count = len(all_fru_data)
+        analysis.ret_count = len(all_ret_tma_data['ret'])
+        analysis.tma_count = len(all_ret_tma_data['tma'])
+        analysis.fiber_links_count = len(all_fiber_data)
+        analysis.sfp_modules_count = len(all_sfp_data)
+        analysis.pusch_cells_count = len(all_pusch_data)
         analysis.save()
 
         return analysis
@@ -340,10 +342,10 @@ class DashboardView(LoginRequiredMixin, ListView):
         
         # Admin vede tutto
         if user.is_superuser or (hasattr(user, 'profile') and user.profile.is_admin()):
-            return Analysis.objects.all().select_related('log_file').order_by('-created_at')
+            return Analysis.objects.all().order_by('-created_at')
         
         # Tecnico e Viewer vedono solo le proprie
-        return Analysis.objects.filter(user=user).select_related('log_file').order_by('-created_at')
+        return Analysis.objects.filter(user=user).order_by('-created_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -405,7 +407,7 @@ class ExportExcelView(LoginRequiredMixin, DetailView):
         exporter = ExcelExporter(analysis)
         excel_file = exporter.generate()
 
-        apparato = analysis.log_file.apparato_nome or 'ericsson'
+        apparato = analysis.apparato_nome or 'ericsson'
         data_str = analysis.created_at.strftime('%Y%m%d')
         filename = f'ericsson_{apparato}_{data_str}.xlsx'
 
@@ -456,7 +458,7 @@ class DeleteAnalysisView(View):
                     messages.error(request, '❌ Non hai i permessi per eliminare questa analisi')
                     return redirect('core:dashboard')
             
-            apparato = analysis.log_file.apparato_nome
+            apparato = analysis.apparato_nome
             analysis.delete()
             messages.success(request, f'✅ Analisi apparato {apparato} eliminata con successo')
         except Analysis.DoesNotExist:
@@ -633,7 +635,7 @@ class ExportPreSwapView(LoginRequiredMixin, DetailView):
         exporter = ExcelExporter(analysis)
         excel_file = exporter.generate_preswap()
 
-        apparato = analysis.log_file.apparato_nome or 'ericsson'
+        apparato = analysis.apparato_nome or 'ericsson'
         data_str = analysis.created_at.strftime('%Y%m%d')
         filename = f'preswap_{apparato}_{data_str}.xlsx'
 

@@ -219,13 +219,13 @@ class ExcelExporter:
         for idx, ret in enumerate(self.analysis.ret_devices.all(), start=2):
             ws.cell(row=idx, column=1, value=ret.apparato or '')
             ws.cell(row=idx, column=2, value=ret.antenna_group)
-            ws.cell(row=idx, column=2, value=ret.antenna_near_unit)
-            ws.cell(row=idx, column=3, value=ret.radio_unit)
-            ws.cell(row=idx, column=4, value=ret.status)
-            ws.cell(row=idx, column=5, value=ret.device_type)
-            ws.cell(row=idx, column=6, value=ret.product_nr)
-            ws.cell(row=idx, column=7, value=ret.revision)
-            ws.cell(row=idx, column=8, value=ret.unique_id)
+            ws.cell(row=idx, column=3, value=ret.antenna_near_unit)
+            ws.cell(row=idx, column=4, value=ret.radio_unit)
+            ws.cell(row=idx, column=5, value=ret.status)
+            ws.cell(row=idx, column=6, value=ret.device_type)
+            ws.cell(row=idx, column=7, value=ret.product_nr)
+            ws.cell(row=idx, column=8, value=ret.revision)
+            ws.cell(row=idx, column=9, value=ret.unique_id)
 
         self._autosize(ws)
 
@@ -242,13 +242,13 @@ class ExcelExporter:
         for idx, tma in enumerate(self.analysis.tma_devices.all(), start=2):
             ws.cell(row=idx, column=1, value=tma.apparato or '')
             ws.cell(row=idx, column=2, value=tma.antenna_group)
-            ws.cell(row=idx, column=2, value=tma.antenna_near_unit)
-            ws.cell(row=idx, column=3, value=tma.radio_unit)
-            ws.cell(row=idx, column=4, value=tma.status)
-            ws.cell(row=idx, column=5, value=tma.device_type)
-            ws.cell(row=idx, column=6, value=tma.product_nr)
-            ws.cell(row=idx, column=7, value=tma.revision)
-            ws.cell(row=idx, column=8, value=tma.unique_id)
+            ws.cell(row=idx, column=3, value=tma.antenna_near_unit)
+            ws.cell(row=idx, column=4, value=tma.radio_unit)
+            ws.cell(row=idx, column=5, value=tma.status)
+            ws.cell(row=idx, column=6, value=tma.device_type)
+            ws.cell(row=idx, column=7, value=tma.product_nr)
+            ws.cell(row=idx, column=8, value=tma.revision)
+            ws.cell(row=idx, column=9, value=tma.unique_id)
 
         self._autosize(ws)
 

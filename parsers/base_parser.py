@@ -58,14 +58,17 @@ class BaseParser:
             if amos_match and not metadata['apparato_nome']:
                 metadata['apparato_nome'] = amos_match.group(1)
 
-            # Timestamp, IP, SW Version tipici nei log Ericsson
+            # Timestamp e IP dai log Ericsson
             timestamp_match = re.search(
-                r'(\d{6}-\d{2}:\d{2}:\d{2}\+\d{4})\s+([\d.]+)\s+([\w.]+)', line
+                r'(\d{6}-\d{2}:\d{2}:\d{2}\+\d{4})\s+([\d.]+)', line
             )
             if timestamp_match:
                 metadata['timestamp'] = timestamp_match.group(1)
                 metadata['ip_address'] = timestamp_match.group(2)
-                metadata['sw_version'] = timestamp_match.group(3)
+            # SW Version da riga 'Checking MOM version...MSRBS_NODE_MODEL_25.Q4_...'
+            mom_match = re.search(r'Checking MOM version\.+MSRBS_NODE_MODEL_(\d+\.Q\d+)', line)
+            if mom_match and not metadata['sw_version']:
+                metadata['sw_version'] = mom_match.group(1)
 
         return metadata
 

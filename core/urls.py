@@ -4,6 +4,7 @@ URLs per Ericsson Analyzer
 from django.urls import path
 from .views import (
     LgaTrendView,
+    ExportPreSwapView,
     UploadView, 
     DashboardView, 
     AnalysisDetailView,
@@ -26,6 +27,7 @@ urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('analysis/<int:pk>/', AnalysisDetailView.as_view(), name='analysis_detail'),
     path('analysis/<int:pk>/export/', ExportExcelView.as_view(), name='export_excel'),
+    path('analysis/<int:pk>/export-preswap/', ExportPreSwapView.as_view(), name='export_preswap'),
     path('analysis/<int:pk>/lga-trend/', LgaTrendView.as_view(), name='lga_trend'),
     path('analysis/<int:pk>/delete/', DeleteAnalysisView.as_view(), name='delete_analysis'),
     path('analysis/delete-all/', DeleteAllAnalysesView.as_view(), name='delete_all_analyses'),

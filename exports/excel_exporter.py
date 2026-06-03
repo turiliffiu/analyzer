@@ -34,6 +34,19 @@ class ExcelExporter:
         self.wb = Workbook()
         self.wb.remove(self.wb.active)   # rimuove sheet vuoto default
 
+
+    def generate_preswap(self) -> BytesIO:
+        """Genera Excel Pre Swap con 4 fogli: Radio VSWR, Allarmi, RET, Alarm Ports"""
+        self._sheet_radio_units()
+        self._sheet_allarmi()
+        self._sheet_ret()
+        self._sheet_alarm_ports()
+
+        excel_file = BytesIO()
+        self.wb.save(excel_file)
+        excel_file.seek(0)
+        return excel_file
+
     def generate(self) -> BytesIO:
         """Genera il workbook e restituisce BytesIO"""
         self._sheet_radio_units()

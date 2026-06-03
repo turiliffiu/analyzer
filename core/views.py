@@ -620,3 +620,26 @@ class LgaTrendView(LoginRequiredMixin, DetailView):
             'filter_sev':        filter_sev,
         })
         return context
+
+
+class ExportPreSwapView(LoginRequiredMixin, DetailView):
+    """Export Pre Swap: Radio VSWR, Allarmi, RET, Alarm Ports"""
+    model = Analysis
+
+    def get(self, request, *args, **kwargs):
+        analysis = self.get_object()
+
+        from exports.excel_exporter import ExcelExporter
+        exporter = ExcelExporter(analysis)
+        excel_file = exporter.generate_preswap()
+
+        apparato = analysis.log_file.apparato_nome or 'ericsson'
+        data_str = analysis.created_at.strftime('%Y%m%d')
+        filename = f'preswap_{apparato}_{data_str}.xlsx'
+
+        response = HttpResponse(
+            excel_file.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response

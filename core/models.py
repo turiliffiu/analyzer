@@ -197,7 +197,7 @@ class RETDevice(models.Model):
     status = models.CharField(max_length=20)
     device_type = models.CharField(max_length=50)
     product_nr = models.CharField(max_length=50, blank=True)
-    revision = models.CharField(max_length=20, blank=True)
+    revision = models.CharField(max_length=50, blank=True)
     unique_id = models.CharField(max_length=50, blank=True)
     
     class Meta:
@@ -221,7 +221,7 @@ class TMADevice(models.Model):
     status = models.CharField(max_length=20)
     device_type = models.CharField(max_length=50)
     product_nr = models.CharField(max_length=50, blank=True)
-    revision = models.CharField(max_length=20, blank=True)
+    revision = models.CharField(max_length=50, blank=True)
     unique_id = models.CharField(max_length=50, blank=True)
     
     class Meta:
@@ -395,7 +395,7 @@ class TNBackhaul(models.Model):
     # Vendor info
     vendor = models.CharField(max_length=50)
     vendor_product = models.CharField(max_length=100)
-    revision = models.CharField(max_length=20)
+    revision = models.CharField(max_length=50)
     serial = models.CharField(max_length=50)
     date = models.CharField(max_length=20)
     ericsson_product = models.CharField(max_length=100)

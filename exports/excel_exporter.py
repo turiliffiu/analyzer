@@ -147,9 +147,9 @@ class ExcelExporter:
 
         for idx, alarm in enumerate(self.analysis.alarms.all(), start=2):
             ws.cell(row=idx, column=1, value=alarm.apparato or '')
-            ws.cell(row=idx, column=3, value=alarm.severity)
-            ws.cell(row=idx, column=4, value=alarm.alarm_number)
-            ws.cell(row=idx, column=5, value=alarm.cause)
+            ws.cell(row=idx, column=2, value=alarm.severity)
+            ws.cell(row=idx, column=3, value=alarm.alarm_number)
+            ws.cell(row=idx, column=4, value=alarm.cause)
             color = SEVERITY_COLORS.get(alarm.severity, '')
             if color:
                 self._row_fill(ws, idx, color)

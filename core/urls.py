@@ -2,6 +2,7 @@
 URLs per Ericsson Analyzer
 """
 from django.urls import path
+from django.contrib.auth import views as auth_views
 from .views import (
     LgaTrendView,
     ExportPreSwapView,
@@ -24,6 +25,13 @@ urlpatterns = [
     # Auth
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', CustomLogoutView.as_view(), name='logout'),
+    path('password-change/', auth_views.PasswordChangeView.as_view(
+        template_name='core/password_change.html',
+        success_url='/password-change/done/'
+    ), name='password_change'),
+    path('password-change/done/', auth_views.PasswordChangeDoneView.as_view(
+        template_name='core/password_change_done.html'
+    ), name='password_change_done'),
     
     # App
     path('', UploadView.as_view(), name='upload'),

@@ -5,6 +5,9 @@ from django.urls import path
 from .views import (
     LgaTrendView,
     ExportPreSwapView,
+    SintesiView,
+    alarm_pattern_add,
+    alarm_pattern_delete,
     UploadView, 
     DashboardView, 
     AnalysisDetailView,
@@ -29,6 +32,9 @@ urlpatterns = [
     path('analysis/<int:pk>/export/', ExportExcelView.as_view(), name='export_excel'),
     path('analysis/<int:pk>/export-preswap/', ExportPreSwapView.as_view(), name='export_preswap'),
     path('analysis/<int:pk>/lga-trend/', LgaTrendView.as_view(), name='lga_trend'),
+    path('sintesi/', SintesiView.as_view(), name='sintesi'),
+    path('api/alarm-patterns/add/', alarm_pattern_add, name='alarm_pattern_add'),
+    path('api/alarm-patterns/<int:pk>/delete/', alarm_pattern_delete, name='alarm_pattern_delete'),
     path('analysis/<int:pk>/delete/', DeleteAnalysisView.as_view(), name='delete_analysis'),
     path('analysis/delete-all/', DeleteAllAnalysesView.as_view(), name='delete_all_analyses'),
 ]

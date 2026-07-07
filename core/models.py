@@ -483,3 +483,20 @@ class AlarmPort(models.Model):
 
     def __str__(self):
         return f"{self.fru} AlarmPort={self.alarm_port} — {self.alarm_slogan}"
+
+
+class AlarmExcludePattern(models.Model):
+    """Pattern di allarme MINOR da escludere dalla sintesi Criticità"""
+    pattern = models.CharField(max_length=200, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    class Meta:
+        ordering = ['pattern']
+        verbose_name = "Pattern Escluso"
+        verbose_name_plural = "Pattern Esclusi"
+
+    def __str__(self):
+        return self.pattern

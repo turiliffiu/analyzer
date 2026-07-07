@@ -1,0 +1,550 @@
+{% extends 'core/base.html' %}
+{% block title %}Sintesi Excel — Ericsson Analyzer{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Dark theme per l'area sintesi */
+#sintesi-app {
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bg4:#2d333b;
+  --border:#30363d;--border2:#444c56;
+  --txt:#e6edf3;--txt2:#8b949e;--txt3:#484f58;
+  --blue:#388bfd;--blue-bg:#1c2a3a;
+  --green:#3fb950;--green-bg:#0d2117;
+  --red:#f85149;--red-bg:#3d1c1c;
+  --amber:#d29922;--amber-bg:#2d2100;
+  --purple:#bc8cff;
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'Cascadia Code','JetBrains Mono','Fira Code',monospace;
+  background:var(--bg);
+  color:var(--txt);
+  font-family:var(--font);
+  border-radius:10px;
+  overflow:hidden;
+  min-height:80vh;
+  display:flex;
+}
+#sintesi-app button{cursor:pointer;font-family:var(--font)}
+#sintesi-app ::-webkit-scrollbar{width:6px;height:6px}
+#sintesi-app ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* SIDEBAR */
+#s-sidebar{width:280px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#s-main{flex:1;overflow:auto}
+.sb-hdr{padding:14px 16px 8px;font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;display:flex;justify-content:space-between;align-items:center}
+.sb-up{margin:0 12px 12px;padding:14px 10px;border:1px dashed var(--border2);border-radius:8px;text-align:center;font-size:12px;color:var(--txt2);transition:.2s;cursor:pointer}
+.sb-up:hover,.sb-up.drag{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+.sb-files{max-height:150px;overflow-y:auto;padding:0 8px 8px}
+.file-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:12px;color:var(--txt2)}
+.file-row:hover{background:var(--bg3)}
+.file-row .fname{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-row .frm{color:var(--txt3);border:none;background:none;font-size:14px;padding:2px 4px;border-radius:4px}
+.file-row .frm:hover{color:var(--red);background:var(--red-bg)}
+.sb-div{height:1px;background:var(--border);margin:4px 12px 8px}
+.sb-folders{flex:1;overflow-y:auto;padding:0 8px 12px}
+.folder-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--txt2);transition:.15s;margin-bottom:2px}
+.folder-item:hover{background:var(--bg3);color:var(--txt)}
+.folder-item.active{background:var(--blue-bg);color:var(--blue);font-weight:500}
+.folder-item.crit.active{background:var(--red-bg);color:var(--red)}
+.folder-ico{width:26px;height:26px;border-radius:6px;background:var(--bg3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.folder-item.active .folder-ico{background:var(--blue);color:#fff}
+.folder-item.crit.active .folder-ico{background:var(--red);color:#fff}
+.folder-meta{flex:1;min-width:0}
+.folder-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.folder-sub{font-size:10px;color:var(--txt3)}
+.empty-hint{padding:24px 16px;text-align:center;font-size:12px;color:var(--txt3);line-height:1.6}
+
+/* TOPBAR INTERNA */
+#s-topbar{display:flex;align-items:center;gap:10px;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.s-btn{padding:7px 14px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--border2);background:var(--bg3);color:var(--txt);transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.s-btn:hover{background:var(--bg4)}
+.s-btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.s-btn.primary:hover{filter:brightness(1.1)}
+.s-btn:disabled{opacity:.4;cursor:not-allowed}
+.s-sep{flex:1}
+
+/* MAIN CONTENT */
+.dash{padding:24px 28px}
+.d-title{font-size:21px;font-weight:600;margin-bottom:4px}
+.d-sub{font-size:13px;color:var(--txt2);margin-bottom:20px}
+.st{font-size:12px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.6px;margin:20px 0 10px}
+table.wt{width:100%;border-collapse:collapse;font-size:13px}
+table.wt th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);background:var(--bg3);white-space:nowrap;position:sticky;top:0}
+table.wt td{padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.wt tr:hover td{background:var(--bg3)}
+table.crit-table{width:100%;border-collapse:collapse;font-size:12.5px}
+table.crit-table th{padding:8px 10px;font-size:11.5px;font-weight:700;color:#fff;white-space:nowrap;position:sticky;top:0;text-align:left}
+table.crit-table td{padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--txt)}
+table.crit-table tbody tr:nth-child(even){background:var(--bg2)}
+table.crit-table tbody tr:hover td{background:var(--bg3)}
+.vswr-hdr th{background:var(--blue)}
+.alarm-hdr th{background:var(--red)}
+.crit-note{font-size:13px;color:var(--txt2);margin:18px 0 10px}
+.sev-crit{color:var(--red);font-weight:700}
+.sev-min{color:var(--amber);font-weight:700}
+.badge-s{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--bg3);color:var(--txt2);border:1px solid var(--border2)}
+.badge-s.red{background:var(--red-bg);color:var(--red);border-color:var(--red)}
+.pill-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.tbl-wrap{max-height:55vh;overflow:auto;border:1px solid var(--border);border-radius:8px}
+.num{text-align:right;font-family:var(--mono)}
+.ldr{display:flex;align-items:center;gap:10px;color:var(--txt2);font-size:13px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin:0 0 16px}
+.spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:40px;text-align:center}
+.welcome h2{font-size:22px;font-weight:600}
+.welcome p{color:var(--txt2);max-width:460px;line-height:1.6;font-size:13px}
+
+/* PANNELLO PATTERN */
+#pattern-panel{background:var(--bg2);border-top:1px solid var(--border);padding:14px 16px;flex-shrink:0}
+.pattern-title{font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.pattern-list{max-height:140px;overflow-y:auto;margin-bottom:8px}
+.pattern-row{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;font-size:11.5px;color:var(--txt2)}
+.pattern-row:hover{background:var(--bg3)}
+.pattern-row span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pattern-row button{border:none;background:none;color:var(--txt3);font-size:13px;padding:1px 4px;border-radius:3px;cursor:pointer}
+.pattern-row button:hover{color:var(--red);background:var(--red-bg)}
+.pattern-add{display:flex;gap:6px}
+.pattern-add input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;color:var(--txt);font-size:12px;padding:5px 8px;outline:none}
+.pattern-add input:focus{border-color:var(--blue)}
+.pattern-add button{padding:5px 10px;border-radius:5px;border:1px solid var(--blue);background:var(--blue);color:#fff;font-size:12px;cursor:pointer}
+.toast-s{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border2);color:var(--txt);padding:10px 16px;border-radius:8px;font-size:13px;z-index:9999;animation:toastIn .2s ease}
+@keyframes toastIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="sintesi-app">
+
+  <!-- SIDEBAR -->
+  <div id="s-sidebar">
+    <div class="sb-hdr">File caricati <span class="badge-s" id="fileCountBadge">0</span></div>
+    <div class="sb-up" id="dzSide" onclick="document.getElementById('fi').click()">&#8679; Trascina file .xlsx</div>
+    <div class="sb-files" id="fileList"></div>
+    <div class="sb-div"></div>
+    <div class="sb-hdr">Folder <span class="badge-s" id="folderCountBadge">0</span></div>
+    <div class="sb-folders" id="folderList"></div>
+
+    <!-- PANNELLO PATTERN ESCLUSIONE -->
+    <div id="pattern-panel">
+      <div class="pattern-title">
+        <span>⚠️ Pattern MINOR esclusi</span>
+        <span class="badge-s" id="patternCountBadge">0</span>
+      </div>
+      <div class="pattern-list" id="patternList"></div>
+      <div class="pattern-add">
+        <input type="text" id="patternInput" placeholder="Nuovo pattern da escludere..." maxlength="200">
+        <button onclick="addPattern()">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div id="s-topbar">
+      <button class="s-btn" onclick="document.getElementById('fi').click()">&#8679; Carica Excel</button>
+      <div class="s-sep"></div>
+      <button class="s-btn primary" id="btnExport" onclick="exportSintesi()" disabled>&#11015; Genera Sintesi Finale</button>
+      <input type="file" id="fi" accept=".xlsx,.xls" multiple onchange="handleFiles(this.files)" style="display:none">
+    </div>
+    <div id="s-main"><div id="cnt" style="height:100%"></div></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ── CONSTANTS & CONFIG ──────────────────────────────────────────
+const VSWR_THRESHOLD = 1.5;
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+// Pattern caricati dal DB Django
+let MINOR_EXCLUDE_PATTERNS = {{ patterns_json|safe }};
+// MINOR_EXCLUDE_PATTERNS = [{id, pattern}, ...]
+
+// ── STATE ───────────────────────────────────────────────────────
+const STATE = { files: [], folders: {}, activeFolder: 'Criticità' };
+
+// ── UTILITIES ───────────────────────────────────────────────────
+function uid() { return Math.random().toString(36).slice(2); }
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtNum(n) { return n.toLocaleString('it-IT'); }
+function isNumericCell(v) { return typeof v === 'number'; }
+function parseNum(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') {
+    const s = v.trim().replace(/\./g,'').replace(',','.');
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+  return null;
+}
+function toast(msg, type='info') {
+  const t = document.createElement('div');
+  t.className = 'toast-s';
+  t.style.borderColor = type==='error' ? 'var(--red)' : type==='success' ? 'var(--green)' : 'var(--border2)';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+function colorFor(name) {
+  const colors = ['#388bfd','#3fb950','#f85149','#d29922','#bc8cff','#39d353'];
+  let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % colors.length;
+  return colors[Math.abs(h)];
+}
+function displayColName(c) {
+  if (String(c).trim() === 'Alarm Number') return 'Alarm';
+  return c;
+}
+function isNumericColHeader(c) { return /^(TX|VSWR|Return Loss|RX)/i.test(String(c).trim()); }
+
+// ── PATTERN MANAGEMENT ──────────────────────────────────────────
+function renderPatterns() {
+  const list = document.getElementById('patternList');
+  const badge = document.getElementById('patternCountBadge');
+  badge.textContent = MINOR_EXCLUDE_PATTERNS.length;
+  if (!MINOR_EXCLUDE_PATTERNS.length) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--txt3);padding:4px 6px">Nessun pattern configurato</div>';
+    return;
+  }
+  list.innerHTML = MINOR_EXCLUDE_PATTERNS.map(p =>
+    `<div class="pattern-row">
+      <span title="${esc(p.pattern)}">${esc(p.pattern)}</span>
+      <button onclick="deletePattern(${p.id})" title="Rimuovi">×</button>
+    </div>`
+  ).join('');
+}
+
+async function addPattern() {
+  const input = document.getElementById('patternInput');
+  const pattern = input.value.trim();
+  if (!pattern) return;
+  try {
+    const r = await fetch('/api/alarm-patterns/add/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': CSRF_TOKEN},
+      body: JSON.stringify({pattern})
+    });
+    const data = await r.json();
+    if (data.error) { toast(data.error, 'error'); return; }
+    if (!data.created) { toast('Pattern già presente', 'info'); return; }
+    MINOR_EXCLUDE_PATTERNS.push({id: data.id, pattern: data.pattern});
+    MINOR_EXCLUDE_PATTERNS.sort((a,b) => a.pattern.localeCompare(b.pattern));
+    input.value = '';
+    renderPatterns();
+    renderMain(); // ricalcola Criticità
+    toast('Pattern aggiunto', 'success');
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+}
+
+async function deletePattern(id) {
+  try {
+    const r = await fetch(`/api/alarm-patterns/${id}/delete/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF_TOKEN}
+    });
+    const data = await r.json();
+    if (data.error) { toast(data.error, 'error'); return; }
+    MINOR_EXCLUDE_PATTERNS = MINOR_EXCLUDE_PATTERNS.filter(p => p.id !== id);
+    renderPatterns();
+    renderMain();
+    toast('Pattern rimosso', 'success');
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+}
+
+// ── DATA LAYER ──────────────────────────────────────────────────
+function readExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+        resolve(wb);
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('Lettura file fallita'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function addFileToState(fileMeta, wb) {
+  STATE.files.push(fileMeta);
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+    if (!rows.length) continue;
+    const cols = Object.keys(rows[0]).filter(k => k !== '__rowNum__' && !String(k).startsWith('__EMPTY'));
+    fileMeta.sheetNames.push(sheetName);
+    if (!STATE.folders[sheetName]) {
+      STATE.folders[sheetName] = {name: sheetName, columns: cols, rows: [], sourceFiles: new Set()};
+    }
+    const folder = STATE.folders[sheetName];
+    rows.forEach(r => {
+      const row = {};
+      cols.forEach(c => row[c] = r[c] ?? '');
+      row.__file = fileMeta.name;
+      folder.rows.push(row);
+    });
+    folder.sourceFiles.add(fileMeta.name);
+  }
+}
+
+function removeFileFromState(fileId) {
+  const fileMeta = STATE.files.find(f => f.id === fileId);
+  if (!fileMeta) return;
+  STATE.files = STATE.files.filter(f => f.id !== fileId);
+  for (const sheetName of fileMeta.sheetNames) {
+    const folder = STATE.folders[sheetName];
+    if (!folder) continue;
+    folder.rows = folder.rows.filter(r => r.__file !== fileMeta.name);
+    folder.sourceFiles.delete(fileMeta.name);
+    if (!folder.rows.length) delete STATE.folders[sheetName];
+  }
+}
+
+function dedupeRows(rows, cols) {
+  const seen = new Set();
+  return rows.filter(r => {
+    const key = cols.map(c => String(r[c] ?? '')).join('\x00');
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+
+// ── CRITICITÀ ───────────────────────────────────────────────────
+function computeCriticita() {
+  const excludePatterns = MINOR_EXCLUDE_PATTERNS.map(p => p.pattern.toLowerCase());
+
+  // VSWR
+  let vswrCols = [], vswrRows = [], vCol = null;
+  for (const folder of Object.values(STATE.folders)) {
+    const vc = folder.columns.find(c => c.trim().toUpperCase() === 'VSWR');
+    if (!vc) continue;
+    if (!vswrCols.length) { vswrCols = folder.columns; vCol = vc; }
+    const unique = dedupeRows(folder.rows, folder.columns);
+    unique.forEach(r => {
+      const v = parseNum(r[vc]);
+      if (v !== null && v >= VSWR_THRESHOLD) vswrRows.push(r);
+    });
+  }
+
+  // Allarmi
+  let alarmCols = [], alarmRows = [], sevValueCol = null;
+  for (const folder of Object.values(STATE.folders)) {
+    const hasSev = folder.columns.some(c => c.trim() === 'Severity');
+    const hasAlNum = folder.columns.some(c => c.trim() === 'Alarm Number');
+    if (!hasSev || !hasAlNum) continue;
+    if (!alarmCols.length) {
+      alarmCols = folder.columns;
+      sevValueCol = folder.columns.find(c => c.trim() === 'Severity');
+    }
+    const unique = dedupeRows(folder.rows, folder.columns);
+    unique.forEach(r => {
+      const sevVal = String(r[sevValueCol] || '').trim().toUpperCase();
+      if (sevVal !== 'CRITICAL' && sevVal !== 'MAJOR' && sevVal !== 'MINOR') return;
+      if (sevVal === 'MINOR') {
+        const rowText = Object.values(r).join(' ').toLowerCase();
+        if (excludePatterns.some(p => rowText.includes(p.toLowerCase()))) return;
+      }
+      alarmRows.push(r);
+    });
+  }
+  return {vswrCols, vswrRows, alarmCols, alarmRows, vCol, sevValueCol};
+}
+
+// ── EXPORT ──────────────────────────────────────────────────────
+function exportSintesi() {
+  const wb = XLSX.utils.book_new();
+  const {vswrCols, vswrRows, alarmCols, alarmRows} = computeCriticita();
+
+  // Foglio Criticità
+  const critData = [];
+  if (vswrCols.length) {
+    critData.push(vswrCols.concat(['File origine']));
+    vswrRows.forEach(r => critData.push(vswrCols.map(c => r[c] ?? '').concat([r.__file||''])));
+  }
+  critData.push([]);
+  critData.push(['E gli allarmi, di interesse relativo allo SWAP, presenti sulle BB:']);
+  critData.push([]);
+  if (alarmCols.length) {
+    critData.push(alarmCols.concat(['File origine']));
+    alarmRows.forEach(r => critData.push(alarmCols.map(c => r[c] ?? '').concat([r.__file||''])));
+  }
+  const wsCrit = XLSX.utils.aoa_to_sheet(critData);
+  XLSX.utils.book_append_sheet(wb, wsCrit, 'Criticità');
+
+  // Fogli folder normali
+  for (const folder of Object.values(STATE.folders)) {
+    const unique = dedupeRows(folder.rows, folder.columns);
+    const data = [folder.columns.concat(['File origine'])];
+    unique.forEach(r => data.push(folder.columns.map(c => r[c] ?? '').concat([r.__file||''])));
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const safeName = folder.name.substring(0, 31);
+    XLSX.utils.book_append_sheet(wb, ws, safeName);
+  }
+
+  XLSX.writeFile(wb, 'Sintesi_Finale.xlsx');
+}
+
+// ── RENDER ──────────────────────────────────────────────────────
+function renderAll() {
+  renderSidebar();
+  renderMain();
+  renderPatterns();
+  document.getElementById('btnExport').disabled = !STATE.files.length;
+}
+
+function renderSidebar() {
+  const fileList = document.getElementById('fileList');
+  const folderList = document.getElementById('folderList');
+  document.getElementById('fileCountBadge').textContent = STATE.files.length;
+  document.getElementById('folderCountBadge').textContent = Object.keys(STATE.folders).length;
+
+  fileList.innerHTML = STATE.files.map(f => `
+    <div class="file-row">
+      <span>📄</span>
+      <span class="fname" title="${esc(f.name)}">${esc(f.name)}</span>
+      <button class="frm" onclick="removeFile('${f.id}')" title="Rimuovi">×</button>
+    </div>`).join('') || '<div class="empty-hint">Nessun file caricato</div>';
+
+  const critItem = `<div class="folder-item crit ${STATE.activeFolder==='Criticità'?'active':''}" onclick="setFolder('Criticità')">
+    <div class="folder-ico">⚠️</div>
+    <div class="folder-meta"><div class="folder-name">Criticità</div><div class="folder-sub">Sintesi automatica</div></div>
+  </div>`;
+
+  const folderItems = Object.values(STATE.folders).map(f => `
+    <div class="folder-item ${STATE.activeFolder===f.name?'active':''}" onclick="setFolder('${esc(f.name)}')">
+      <div class="folder-ico" style="color:${colorFor(f.name)}">📁</div>
+      <div class="folder-meta">
+        <div class="folder-name">${esc(f.name)}</div>
+        <div class="folder-sub">${fmtNum(f.rows.length)} righe · ${f.sourceFiles.size} file</div>
+      </div>
+    </div>`).join('');
+
+  folderList.innerHTML = critItem + (folderItems || '<div class="empty-hint">Carica file Excel per vedere i folder</div>');
+}
+
+function renderMain() {
+  const el = document.getElementById('cnt');
+  if (!STATE.files.length) {
+    el.innerHTML = `<div class="welcome">
+      <h2 style="color:var(--txt)">Sintesi Multi-Excel</h2>
+      <p style="color:var(--txt2)">Carica più file Excel dello stesso tipo. I fogli con lo stesso nome vengono uniti automaticamente. Il folder "Criticità" evidenzia VSWR ≥ 1,5 e allarmi CRITICAL/MINOR.</p>
+      <div style="border:2px dashed var(--border2);border-radius:12px;padding:40px 32px;text-align:center;cursor:pointer;max-width:420px;width:100%" onclick="document.getElementById('fi').click()">
+        <div style="font-size:32px;margin-bottom:10px">📂</div>
+        <div style="font-size:15px;font-weight:500;color:var(--txt);margin-bottom:6px">Trascina i file .xlsx</div>
+        <div style="font-size:13px;color:var(--txt2)">oppure clicca per selezionare</div>
+      </div>
+    </div>`;
+    return;
+  }
+  if (STATE.activeFolder === 'Criticità') { renderCriticita(el); return; }
+  const folder = STATE.folders[STATE.activeFolder];
+  if (folder) { renderFolderDetail(folder, el); return; }
+  STATE.activeFolder = 'Criticità'; renderCriticita(el);
+}
+
+function renderFolderDetail(folder, el) {
+  const cols = folder.columns;
+  const rows = dedupeRows(folder.rows, folder.columns);
+  const dupCount = folder.rows.length - rows.length;
+  el.innerHTML = `<div class="dash">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+      <div style="width:36px;height:36px;border-radius:8px;background:${colorFor(folder.name)}22;color:${colorFor(folder.name)};display:flex;align-items:center;justify-content:center;font-size:16px">📁</div>
+      <div class="d-title">${esc(folder.name)}</div>
+    </div>
+    <div class="d-sub">${fmtNum(rows.length)} righe da ${folder.sourceFiles.size} file${dupCount>0?' · '+fmtNum(dupCount)+' duplicati rimossi':''}</div>
+    <div class="pill-row">${[...folder.sourceFiles].map(f=>`<span class="badge-s">${esc(f)}</span>`).join('')}</div>
+    <div class="tbl-wrap">
+      <table class="wt">
+        <thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}<th>File</th></tr></thead>
+        <tbody>${rows.map(r=>`<tr>${cols.map(c=>{const v=r[c];return `<td class="${isNumericCell(v)?'num':''}">${v===''||v===undefined?'—':esc(v)}</td>`;}).join('')}<td style="color:var(--txt3);font-size:11px">${esc(r.__file)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function renderCriticita(el) {
+  const {vswrCols, vswrRows, alarmCols, alarmRows, vCol, sevValueCol} = computeCriticita();
+  const vswrTable = vswrCols.length ? `
+    <div class="tbl-wrap"><table class="crit-table">
+      <thead><tr class="vswr-hdr">${vswrCols.map(c=>`<th${isNumericColHeader(c)?' class="num"':''}>${esc(displayColName(c))}</th>`).join('')}<th>File</th></tr></thead>
+      <tbody>${vswrRows.map(r=>`<tr>${vswrCols.map(c=>{const v=r[c];const isV=vCol&&c===vCol;return `<td class="${isNumericCell(v)?'num':''}${isV?' sev-crit':''}">${v===''||v===undefined?'—':esc(v)}</td>`;}).join('')}<td style="color:var(--txt3);font-size:11px">${esc(r.__file||'')}</td></tr>`).join('')}</tbody>
+    </table></div>` : `<div class="empty-hint">Nessuna colonna VSWR trovata.</div>`;
+
+  const alarmTable = alarmCols.length ? `
+    <div class="tbl-wrap"><table class="crit-table">
+      <thead><tr class="alarm-hdr">${alarmCols.map(c=>`<th>${esc(displayColName(c))}</th>`).join('')}<th>File</th></tr></thead>
+      <tbody>${alarmRows.map(r=>{
+        const sevVal=sevValueCol?String(r[sevValueCol]||'').trim().toUpperCase():'';
+        return `<tr>${alarmCols.map(c=>{const v=r[c];const isSV=sevValueCol&&c===sevValueCol;const sc=isSV?(sevVal==='CRITICAL'?' sev-crit':(sevVal==='MINOR'?' sev-min':'')):'';return `<td class="${sc}">${v===''||v===undefined?'—':esc(v)}</td>`;}).join('')}<td style="color:var(--txt3);font-size:11px">${esc(r.__file||'')}</td></tr>`;
+      }).join('')}</tbody>
+    </table></div>` : `<div class="empty-hint">Nessuna colonna Severity trovata.</div>`;
+
+  el.innerHTML = `<div class="dash">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+      <div style="width:36px;height:36px;border-radius:8px;background:var(--red-bg);color:var(--red);display:flex;align-items:center;justify-content:center;font-size:16px">⚠️</div>
+      <div class="d-title">Criticità</div>
+    </div>
+    <div class="d-sub">Righe con VSWR ≥ 1,5 e allarmi CRITICAL/MINOR (esclusi i pattern configurati)</div>
+    <div class="pill-row">
+      <span class="badge-s red">${fmtNum(vswrRows.length)} VSWR ≥ 1,5</span>
+      <span class="badge-s red">${fmtNum(alarmRows.length)} allarmi</span>
+    </div>
+    <div class="st">VSWR ≥ 1,5</div>
+    ${vswrTable}
+    <div class="crit-note">E gli allarmi, di interesse relativo allo SWAP, presenti sulle BB:</div>
+    ${alarmTable}
+  </div>`;
+}
+
+// ── EVENT HANDLERS ──────────────────────────────────────────────
+async function handleFiles(fileList) {
+  if (!fileList || !fileList.length) return;
+  const arr = Array.from(fileList);
+  const cnt = document.getElementById('cnt');
+  const ld = document.createElement('div'); ld.className='ldr';
+  ld.innerHTML='<div class="spin"></div> Analisi in corso...';
+  cnt.prepend(ld);
+  let okCount = 0;
+  for (let i=0; i<arr.length; i++) {
+    ld.innerHTML=`<div class="spin"></div> ${esc(arr[i].name)} (${i+1}/${arr.length})`;
+    await new Promise(r=>setTimeout(r,0));
+    try {
+      const wb = await readExcelFile(arr[i]);
+      const fm = {id:uid(), name:arr[i].name, sheetNames:[]};
+      addFileToState(fm, wb); okCount++;
+    } catch(e) { toast('Errore: '+arr[i].name+': '+e.message, 'error'); }
+  }
+  ld.remove();
+  if (okCount) toast(okCount+' file elaborato/i', 'success');
+  document.getElementById('fi').value='';
+  renderAll();
+}
+
+function setFolder(name) { STATE.activeFolder = name; renderAll(); }
+
+function removeFile(fileId) {
+  removeFileFromState(fileId);
+  if (!STATE.folders[STATE.activeFolder]) STATE.activeFolder = 'Criticità';
+  renderAll();
+}
+
+// Drag & drop globale
+document.getElementById('sintesi-app').addEventListener('dragover', e => e.preventDefault());
+document.getElementById('sintesi-app').addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+});
+const dzSide = document.getElementById('dzSide');
+dzSide.addEventListener('dragover', e => { e.preventDefault(); dzSide.classList.add('drag'); });
+dzSide.addEventListener('dragleave', () => dzSide.classList.remove('drag'));
+dzSide.addEventListener('drop', e => { e.preventDefault(); dzSide.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+
+// Enter su input pattern
+document.getElementById('patternInput').addEventListener('keydown', e => { if(e.key==='Enter') addPattern(); });
+
+// ── INIT ────────────────────────────────────────────────────────
+renderAll();
+</script>
+{% endblock %}

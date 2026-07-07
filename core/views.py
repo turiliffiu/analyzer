@@ -645,3 +645,54 @@ class ExportPreSwapView(LoginRequiredMixin, DetailView):
         )
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
+
+
+import json
+from django.views.decorators.http import require_POST, require_GET
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+
+
+class SintesiView(LoginRequiredMixin, TemplateView):
+    """Pagina Sintesi Multi-Excel con gestione pattern esclusione"""
+    template_name = 'core/sintesi_excel.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .models import AlarmExcludePattern
+        patterns = list(AlarmExcludePattern.objects.values('id', 'pattern'))
+        context['patterns_json'] = json.dumps(patterns)
+        return context
+
+
+@login_required
+def alarm_pattern_add(request):
+    """Aggiunge un pattern di esclusione"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    from .models import AlarmExcludePattern
+    try:
+        data = json.loads(request.body)
+        pattern = data.get('pattern', '').strip()
+        if not pattern:
+            return JsonResponse({'error': 'Pattern vuoto'}, status=400)
+        obj, created = AlarmExcludePattern.objects.get_or_create(
+            pattern=pattern,
+            defaults={'created_by': request.user}
+        )
+        return JsonResponse({'id': obj.id, 'pattern': obj.pattern, 'created': created})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def alarm_pattern_delete(request, pk):
+    """Rimuove un pattern di esclusione"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    from .models import AlarmExcludePattern
+    try:
+        AlarmExcludePattern.objects.filter(pk=pk).delete()
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
